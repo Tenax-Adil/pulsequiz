@@ -3,11 +3,6 @@ import {
   Sparkles,
   PlusCircle,
   Play,
-  Flame,
-  Globe2,
-  Cpu,
-  Layers,
-  Users2,
   Wand2,
   History,
   BookOpen,
@@ -16,7 +11,6 @@ import {
   Calendar,
   Check
 } from 'lucide-react';
-import { SAMPLE_QUIZZES } from '../../data/sampleQuizzes.js';
 import { AIGeneratorModal } from './AIGeneratorModal.jsx';
 import { QuizHistoryModal } from './QuizHistoryModal.jsx';
 import { fetchSavedQuizzes, deleteSavedQuiz, fetchGameHistory } from '../../services/firebase.js';
@@ -134,8 +128,8 @@ export function HostDashboard({ onStartRoom, onEditQuiz }) {
         </div>
       </div>
 
-      {/* SECTION 1: MY SAVED QUIZZES (User Created & Saved) */}
-      {savedQuizzes.length > 0 && (
+      {/* MY SAVED QUIZZES (User Created & Saved) */}
+      {savedQuizzes.length > 0 ? (
         <div className="mb-14">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -206,86 +200,31 @@ export function HostDashboard({ onStartRoom, onEditQuiz }) {
             ))}
           </div>
         </div>
-      )}
-
-      {/* SECTION 2: Instant Ready-to-Play Curated Quizzes */}
-      <div className="mt-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-black text-white tracking-tight">
-              Ready-to-Play Curated Quizzes
-            </h2>
-            <p className="text-xs text-slate-400">
-              Launch in 1-click or customize questions in the editor
-            </p>
+      ) : (
+        <div className="text-center py-16 px-4 border border-dashed border-slate-800 rounded-3xl bg-slate-900/30 mb-8">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mx-auto mb-4">
+            <BookOpen className="w-8 h-8" />
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">No Saved Quizzes Yet</h3>
+          <p className="text-sm text-slate-400 max-w-md mx-auto mb-6">
+            Create your custom quiz or generate questions instantly using Gemini AI. Once saved, your quizzes will appear here ready to launch.
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={() => setShowAIModal(true)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-400 hover:to-pink-400 text-white font-bold text-sm transition cursor-pointer"
+            >
+              <Wand2 className="w-4 h-4" /> Generate with AI
+            </button>
+            <button
+              onClick={handleCustomQuiz}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 transition cursor-pointer"
+            >
+              <PlusCircle className="w-4 h-4 text-indigo-400" /> Create Custom Quiz
+            </button>
           </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {SAMPLE_QUIZZES.map((quiz) => (
-            <div
-              key={quiz.id}
-              className="bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded-3xl p-6 transition flex flex-col justify-between group shadow-xl hover:shadow-indigo-500/10"
-            >
-              <div>
-                <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
-                  {quiz.icon}
-                </div>
-                <h3 className="text-xl font-bold text-white mb-2 group-hover:text-indigo-400 transition">
-                  {quiz.title}
-                </h3>
-                <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-                  {quiz.description}
-                </p>
-              </div>
-
-              <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400">
-                  {quiz.questions.length} Questions
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => onEditQuiz(quiz)}
-                    className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 transition cursor-pointer"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleSelectQuiz(quiz)}
-                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold shadow-md shadow-indigo-600/30 transition cursor-pointer"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-white" /> Host
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Tech Architecture Badges */}
-      <div className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800/80 text-center">
-          <Users2 className="w-6 h-6 text-indigo-400 mx-auto mb-2" />
-          <div className="text-lg font-black text-white">200 Concurrency</div>
-          <div className="text-[11px] text-slate-400">Lightweight Managed Snapshots</div>
-        </div>
-        <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800/80 text-center">
-          <Cpu className="w-6 h-6 text-pink-400 mx-auto mb-2" />
-          <div className="text-lg font-black text-white">&lt;50ms Sync</div>
-          <div className="text-[11px] text-slate-400">Centralized State Machine</div>
-        </div>
-        <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800/80 text-center">
-          <Sparkles className="w-6 h-6 text-amber-400 mx-auto mb-2" />
-          <div className="text-lg font-black text-white">Gemini 2.0 AI</div>
-          <div className="text-[11px] text-slate-400">Structured JSON Trivia Engine</div>
-        </div>
-        <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800/80 text-center">
-          <Globe2 className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
-          <div className="text-lg font-black text-white">Zero Server Crash</div>
-          <div className="text-[11px] text-slate-400">Cloud Realtime Listeners</div>
-        </div>
-      </div>
+      )}
 
       <AIGeneratorModal
         isOpen={showAIModal}
