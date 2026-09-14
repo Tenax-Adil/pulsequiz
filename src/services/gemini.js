@@ -107,7 +107,7 @@ const getDefaultTopicImage = (topic) => {
   return 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=900&auto=format&fit=crop&q=80';
 };
 
-// Generates high quality dynamic questions when API key is not configured or network offline
+// Generates high quality dynamic questions when API key is not configured or network offline (supports up to 50 questions)
 function generateCuratedFallbackQuiz(topic, count = 5, difficulty = 'medium') {
   const images = [
     'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=900&auto=format&fit=crop&q=80',
@@ -117,52 +117,86 @@ function generateCuratedFallbackQuiz(topic, count = 5, difficulty = 'medium') {
     'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=900&auto=format&fit=crop&q=80'
   ];
 
-  const templates = [
+  const questionAngles = [
     {
-      text: `Which core concept is most critical when mastering ${topic}?`,
-      options: ['Fundamentals and syntax', 'Premature optimization', 'Ignoring documentation', 'Random trial & error'],
+      template: (t) => `Which core concept is most fundamental when mastering ${t}?`,
+      options: ['Fundamentals and clean syntax', 'Premature optimization', 'Ignoring documentation', 'Random trial & error'],
       correct: 0,
       time: 20
     },
     {
-      text: `What is the primary real-world advantage of applying ${topic}?`,
-      options: ['Increased latency', 'Higher efficiency and scalable performance', 'Manual repetitive overhead', 'Unpredictable outputs'],
+      template: (t) => `What is the primary real-world advantage of implementing ${t}?`,
+      options: ['Increased latency', 'Higher efficiency and scalable performance', 'Manual repetitive overhead', 'Unpredictable state'],
       correct: 1,
       time: 20
     },
     {
-      text: `In standard best practices for ${topic}, what should be prioritized first?`,
-      options: ['Unchecked deployment', 'Clean architecture and modularity', 'Writing all code in one file', 'Disabling error handling'],
+      template: (t) => `In production best practices for ${t}, what should be prioritized first?`,
+      options: ['Unchecked deployment', 'Clean architecture and modularity', 'Writing all code in one single file', 'Disabling logging'],
       correct: 1,
       time: 15
     },
     {
-      text: `Which tool or mechanism is commonly paired with ${topic} in production?`,
-      options: ['Automated CI/CD testing pipeline', 'Floppy disk backups', 'Single thread locks', 'Unversioned files'],
+      template: (t) => `Which tool or mechanism is commonly paired with ${t} in production pipelines?`,
+      options: ['Automated CI/CD testing pipeline', 'Floppy disk backups', 'Single thread blocking locks', 'Unversioned files'],
       correct: 0,
       time: 20
     },
     {
-      text: `What is a well-known pitfall to avoid when scaling ${topic}?`,
-      options: ['Writing clear unit tests', 'Bottlenecks from unindexed queries or unbounded state', 'Reading official RFC specs', 'Using typed interfaces'],
+      template: (t) => `What is a well-known bottleneck to avoid when scaling ${t}?`,
+      options: ['Writing comprehensive unit tests', 'Unindexed queries and unbounded memory leaks', 'Reading official RFC specifications', 'Using typed interfaces'],
       correct: 1,
       time: 20
     },
     {
-      text: `When benchmarking ${topic} under high concurrent load (e.g. 200 users), which metric is paramount?`,
-      options: ['P99 response latency & throughput', 'File line count', 'Keyboard typing speed', 'CSS color saturation'],
+      template: (t) => `When benchmarking ${t} under high concurrent load (e.g. 200 users), which metric is paramount?`,
+      options: ['P99 response latency & throughput', 'File line count', 'Keyboard typing speed', 'Color saturation'],
       correct: 0,
+      time: 20
+    },
+    {
+      template: (t) => `Which security practice is essential when deploying ${t} to the public cloud?`,
+      options: ['Hardcoding API secrets in public git', 'Principle of least privilege & token rotation', 'Disabling TLS/SSL encryption', 'Allowing wildcard CORS everywhere'],
+      correct: 1,
+      time: 20
+    },
+    {
+      template: (t) => `How should state synchronization in ${t} handle unexpected network disconnects?`,
+      options: ['Silent unrecoverable crash', 'Graceful reconnection & state hydration from persistent storage', 'Wipe user data completely', 'Infinite blocking alert prompt'],
+      correct: 1,
+      time: 25
+    },
+    {
+      template: (t) => `Which testing methodology offers the fastest feedback loop during active development of ${t}?`,
+      options: ['Automated unit tests with fast mock runners', 'Manual testing only in production', 'Waiting for customer complaints', 'No tests'],
+      correct: 0,
+      time: 15
+    },
+    {
+      template: (t) => `When optimizing data transfer payloads for ${t}, what approach is recommended?`,
+      options: ['Send full database dumps on every event', 'Compact JSON diffs and lightweight event payloads', 'Uncompressed XML strings', 'Polling every 1ms'],
+      correct: 1,
       time: 20
     }
   ];
 
-  const selected = templates.slice(0, Math.min(count, templates.length));
-  return selected.map((item, idx) => ({
-    id: `gemini_q_${Date.now()}_${idx}`,
-    text: item.text,
-    imageUrl: images[idx % images.length],
-    options: item.options,
-    correctOptionIndex: item.correct,
-    timeLimit: item.time
-  }));
+  const actualCount = Math.min(50, Math.max(1, count));
+  const results = [];
+
+  for (let i = 0; i < actualCount; i++) {
+    const angle = questionAngles[i % questionAngles.length];
+    const cycle = Math.floor(i / questionAngles.length) + 1;
+    const suffix = cycle > 1 ? ` (Part ${cycle})` : '';
+
+    results.push({
+      id: `gemini_q_${Date.now()}_${i}`,
+      text: angle.template(topic) + suffix,
+      imageUrl: images[i % images.length],
+      options: [...angle.options],
+      correctOptionIndex: angle.correct,
+      timeLimit: angle.time
+    });
+  }
+
+  return results;
 }

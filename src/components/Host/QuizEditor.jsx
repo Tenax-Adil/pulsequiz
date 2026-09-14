@@ -46,6 +46,10 @@ export function QuizEditor({ initialQuiz, onStartRoom, onBack, onOpenAIGenerator
   };
 
   const handleAddQuestion = () => {
+    if (questions.length >= 50) {
+      alert('Maximum limit of 50 questions reached for this quiz.');
+      return;
+    }
     const newQ = {
       id: `q_${Date.now()}_${questions.length + 1}`,
       text: '',
@@ -56,6 +60,24 @@ export function QuizEditor({ initialQuiz, onStartRoom, onBack, onOpenAIGenerator
     };
     setQuestions([...questions, newQ]);
     setActiveQuestionIdx(questions.length);
+  };
+
+  const handleDuplicateQuestion = (idxToDup) => {
+    if (questions.length >= 50) {
+      alert('Maximum limit of 50 questions reached for this quiz.');
+      return;
+    }
+    const source = questions[idxToDup];
+    const cloned = {
+      ...source,
+      id: `q_${Date.now()}_${questions.length + 1}`,
+      text: `${source.text} (Copy)`,
+      options: [...source.options],
+    };
+    const nextList = [...questions];
+    nextList.splice(idxToDup + 1, 0, cloned);
+    setQuestions(nextList);
+    setActiveQuestionIdx(idxToDup + 1);
   };
 
   const handleDeleteQuestion = (idxToDelete) => {
@@ -153,17 +175,18 @@ export function QuizEditor({ initialQuiz, onStartRoom, onBack, onOpenAIGenerator
         <div className="lg:col-span-3 space-y-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Questions ({questions.length})
+              Questions ({questions.length}/50)
             </span>
             <button
               onClick={handleAddQuestion}
-              className="flex items-center gap-1 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition cursor-pointer"
+              disabled={questions.length >= 50}
+              className="flex items-center gap-1 text-xs font-bold text-indigo-400 hover:text-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
             >
               <Plus className="w-4 h-4" /> Add
             </button>
           </div>
 
-          <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
+          <div className="space-y-2 max-h-[640px] overflow-y-auto pr-1">
             {questions.map((q, idx) => (
               <div
                 key={q.id || idx}
@@ -174,35 +197,60 @@ export function QuizEditor({ initialQuiz, onStartRoom, onBack, onOpenAIGenerator
                     : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800/80 hover:text-white'
                 }`}
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-xs font-bold shrink-0">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[11px] font-bold shrink-0">
                     {idx + 1}
                   </span>
-                  <span className="text-xs font-medium truncate">
+                  <span className="text-xs font-medium truncate max-w-[130px]">
                     {q.text || 'Untitled Question'}
                   </span>
                 </div>
 
-                {questions.length > 1 && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteQuestion(idx);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:text-rose-400 transition"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                  {questions.length < 50 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDuplicateQuestion(idx);
+                      }}
+                      className="p-1 rounded-lg hover:text-indigo-400 transition"
+                      title="Duplicate Question"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+
+                  {questions.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteQuestion(idx);
+                      }}
+                      className="p-1 rounded-lg hover:text-rose-400 transition"
+                      title="Delete Question"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
 
-            <button
-              onClick={handleAddQuestion}
-              className="w-full py-3 rounded-2xl border-2 border-dashed border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white flex items-center justify-center gap-2 text-xs font-bold transition cursor-pointer"
-            >
-              <Plus className="w-4 h-4" /> Add Question
-            </button>
+            {questions.length < 50 ? (
+              <button
+                type="button"
+                onClick={handleAddQuestion}
+                className="w-full py-3 rounded-2xl border-2 border-dashed border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white flex items-center justify-center gap-2 text-xs font-bold transition cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> Add Question ({questions.length}/50)
+              </button>
+            ) : (
+              <div className="w-full py-2.5 rounded-2xl bg-slate-950/80 border border-slate-800 text-slate-500 text-center text-xs font-semibold">
+                Maximum 50 Questions Limit Reached
+              </div>
+            )}
           </div>
         </div>
 

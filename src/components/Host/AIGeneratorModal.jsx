@@ -119,18 +119,35 @@ export function AIGeneratorModal({ isOpen, onClose, onGenerated }) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-                  Question Count ({count})
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Question Count (1 to 50)
+                  </label>
+                  <span className="text-sm font-black font-mono text-indigo-400 bg-slate-950 px-3 py-1 rounded-xl border border-slate-800">
+                    {count} Questions
+                  </span>
+                </div>
+
+                {/* Smooth 1-50 Range Slider */}
+                <input
+                  type="range"
+                  min={1}
+                  max={50}
+                  value={count}
+                  onChange={(e) => setCount(parseInt(e.target.value, 10))}
+                  className="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-950 rounded-lg mb-3"
+                />
+
+                {/* Quick Presets */}
                 <div className="flex gap-2">
-                  {[3, 5, 8, 10].map((num) => (
+                  {[5, 10, 20, 35, 50].map((num) => (
                     <button
                       key={num}
                       type="button"
                       onClick={() => setCount(num)}
-                      className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition cursor-pointer ${
+                      className={`flex-1 py-2 rounded-xl font-bold text-xs transition cursor-pointer ${
                         count === num
                           ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                           : 'bg-slate-800 text-slate-400 hover:text-white'
