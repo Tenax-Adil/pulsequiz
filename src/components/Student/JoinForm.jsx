@@ -39,7 +39,7 @@ export function JoinForm({ initialCode = '', onJoin, onReconnect, savedSession }
   };
 
   return (
-    <div className="max-w-md w-full mx-auto px-4 py-8">
+    <div className="max-w-md w-full mx-auto px-4 py-8 animate-fade-in-up">
       {/* Reconnection alert banner if student disconnected */}
       {savedSession && savedSession.roomCode && (
         <div className="bg-indigo-950/80 border border-indigo-500/40 p-4 rounded-3xl mb-6 shadow-xl text-center backdrop-blur-md">

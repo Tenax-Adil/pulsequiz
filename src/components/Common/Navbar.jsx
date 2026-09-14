@@ -47,33 +47,19 @@ export function Navbar({
 
           {/* Center Navigation: Only shown when Host is Authenticated */}
           {isHostAuthenticated ? (
-            <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-full p-1 shadow-inner">
-              <button
-                onClick={() => onViewChange('student')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
-                  currentView === 'student'
-                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Users className="w-3.5 h-3.5" /> Player View
-              </button>
-              <button
-                onClick={() => onViewChange('host')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
-                  currentView === 'host'
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <MonitorPlay className="w-3.5 h-3.5" /> Host Studio
-              </button>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-950/80 border border-indigo-500/30 text-indigo-200 text-xs font-bold shadow-inner">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <MonitorPlay className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Host Studio</span>
+              </div>
               <button
                 onClick={onHostLogout}
-                className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-rose-400 hover:text-rose-300 rounded-full hover:bg-rose-950/40 transition cursor-pointer"
-                title="Lock Host Controls"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-400 hover:text-rose-300 rounded-full bg-slate-900/90 border border-slate-800 hover:border-rose-900/50 hover:bg-rose-950/30 transition cursor-pointer"
+                title="Lock & Exit Host Studio"
               >
                 <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Exit Host</span>
               </button>
             </div>
           ) : (
