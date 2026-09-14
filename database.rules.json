@@ -3,6 +3,14 @@
     "rooms": {
       ".read": true,
       ".write": true
+    },
+    "saved_quizzes": {
+      ".read": true,
+      ".write": true
+    },
+    "history": {
+      ".read": true,
+      ".write": true
     }
   }
 }

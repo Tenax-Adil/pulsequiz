@@ -393,3 +393,198 @@ export async function getRoom(roomCode) {
   }
   return data || null;
 }
+
+// -------------------------------------------------------------
+// QUIZ LIBRARY STORAGE (SAVE & LOAD CREATED QUIZZES)
+// -------------------------------------------------------------
+
+export async function saveQuizToLibrary(quiz) {
+  initFirebase();
+  const quizId = quiz.id || `quiz_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  const preparedQuiz = {
+    ...quiz,
+    id: quizId,
+    updatedAt: Date.now(),
+    createdAt: quiz.createdAt || Date.now(),
+  };
+
+  // 1. Mirror in localStorage
+  try {
+    const raw = localStorage.getItem('pulse_saved_quizzes');
+    const list = raw ? JSON.parse(raw) : [];
+    const idx = list.findIndex(q => q.id === quizId);
+    if (idx >= 0) {
+      list[idx] = preparedQuiz;
+    } else {
+      list.unshift(preparedQuiz);
+    }
+    localStorage.setItem('pulse_saved_quizzes', JSON.stringify(list));
+  } catch {
+    // ignore
+  }
+
+  // 2. Save in Firebase Realtime Database
+  if (isConfigured && db) {
+    try {
+      const quizRef = ref(db, `saved_quizzes/${quizId}`);
+      await set(quizRef, preparedQuiz);
+    } catch (err) {
+      console.warn('Firebase saveQuiz error (falling back to local):', err);
+    }
+  }
+
+  return preparedQuiz;
+}
+
+export async function fetchSavedQuizzes() {
+  initFirebase();
+  let firebaseList = [];
+
+  if (isConfigured && db) {
+    try {
+      const listRef = ref(db, 'saved_quizzes');
+      const snap = await get(listRef);
+      const val = snap.val();
+      if (val) {
+        firebaseList = Object.values(val);
+      }
+    } catch (err) {
+      console.warn('Firebase fetchSavedQuizzes error:', err);
+    }
+  }
+
+  // Merge with localStorage
+  let localList = [];
+  try {
+    const raw = localStorage.getItem('pulse_saved_quizzes');
+    if (raw) localList = JSON.parse(raw);
+  } catch {
+    // ignore
+  }
+
+  const map = new Map();
+  [...localList, ...firebaseList].forEach(q => {
+    if (q && q.id) map.set(q.id, q);
+  });
+
+  return Array.from(map.values()).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+}
+
+export async function deleteSavedQuiz(quizId) {
+  initFirebase();
+
+  // Remove from localStorage
+  try {
+    const raw = localStorage.getItem('pulse_saved_quizzes');
+    if (raw) {
+      const list = JSON.parse(raw).filter(q => q.id !== quizId);
+      localStorage.setItem('pulse_saved_quizzes', JSON.stringify(list));
+    }
+  } catch {
+    // ignore
+  }
+
+  // Remove from Firebase Realtime Database
+  if (isConfigured && db) {
+    try {
+      const quizRef = ref(db, `saved_quizzes/${quizId}`);
+      await remove(quizRef);
+    } catch (err) {
+      console.warn('Firebase deleteSavedQuiz error:', err);
+    }
+  }
+}
+
+// -------------------------------------------------------------
+// GAME SESSION HISTORY (TRACK COMPLETED QUIZZES & RESULTS)
+// -------------------------------------------------------------
+
+export async function recordGameHistory(gameSession) {
+  initFirebase();
+  const historyId = `hist_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
+  const record = {
+    ...gameSession,
+    id: historyId,
+    completedAt: Date.now(),
+  };
+
+  // 1. Mirror in localStorage
+  try {
+    const raw = localStorage.getItem('pulse_quiz_history');
+    const list = raw ? JSON.parse(raw) : [];
+    list.unshift(record);
+    // Keep last 50 games
+    localStorage.setItem('pulse_quiz_history', JSON.stringify(list.slice(0, 50)));
+  } catch {
+    // ignore
+  }
+
+  // 2. Save in Firebase Realtime Database
+  if (isConfigured && db) {
+    try {
+      const histRef = ref(db, `history/${historyId}`);
+      await set(histRef, record);
+    } catch (err) {
+      console.warn('Firebase recordGameHistory error:', err);
+    }
+  }
+
+  return record;
+}
+
+export async function fetchGameHistory() {
+  initFirebase();
+  let firebaseList = [];
+
+  if (isConfigured && db) {
+    try {
+      const listRef = ref(db, 'history');
+      const snap = await get(listRef);
+      const val = snap.val();
+      if (val) {
+        firebaseList = Object.values(val);
+      }
+    } catch (err) {
+      console.warn('Firebase fetchGameHistory error:', err);
+    }
+  }
+
+  let localList = [];
+  try {
+    const raw = localStorage.getItem('pulse_quiz_history');
+    if (raw) localList = JSON.parse(raw);
+  } catch {
+    // ignore
+  }
+
+  const map = new Map();
+  [...localList, ...firebaseList].forEach(h => {
+    if (h && h.id) map.set(h.id, h);
+  });
+
+  return Array.from(map.values()).sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+}
+
+export async function deleteGameHistory(historyId) {
+  initFirebase();
+
+  try {
+    const raw = localStorage.getItem('pulse_quiz_history');
+    if (raw) {
+      const list = JSON.parse(raw).filter(h => h.id !== historyId);
+      localStorage.setItem('pulse_quiz_history', JSON.stringify(list));
+    }
+  } catch {
+    // ignore
+  }
+
+  if (isConfigured && db) {
+    try {
+      const histRef = ref(db, `history/${historyId}`);
+      await remove(histRef);
+    } catch (err) {
+      console.warn('Firebase deleteGameHistory error:', err);
+    }
+  }
+}

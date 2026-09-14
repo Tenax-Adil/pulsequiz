@@ -10,13 +10,17 @@ import {
   Sparkles,
   Play,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Save,
+  Check
 } from 'lucide-react';
 import { uploadQuestionImage } from '../../services/storage.js';
 import { OPTION_THEMES } from '../Common/AnswerButton.jsx';
 
-export function QuizEditor({ initialQuiz, onStartRoom, onBack, onOpenAIGenerator }) {
+export function QuizEditor({ initialQuiz, onStartRoom, onSaveQuiz, onBack, onOpenAIGenerator }) {
   const [title, setTitle] = useState(initialQuiz?.title || 'My Interactive Live Quiz');
+  const [currentQuizId, setCurrentQuizId] = useState(initialQuiz?.id || null);
+  const [savedFeedback, setSavedFeedback] = useState(false);
   const [questions, setQuestions] = useState(
     initialQuiz?.questions || [
       {
@@ -104,6 +108,37 @@ export function QuizEditor({ initialQuiz, onStartRoom, onBack, onOpenAIGenerator
     }
   };
 
+  const handleSave = async () => {
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      if (!q.text.trim()) {
+        alert(`Question #${i + 1} has empty text!`);
+        setActiveQuestionIdx(i);
+        return;
+      }
+      for (let o = 0; o < 4; o++) {
+        if (!q.options[o]?.trim()) {
+          alert(`Question #${i + 1} option ${o + 1} is empty!`);
+          setActiveQuestionIdx(i);
+          return;
+        }
+      }
+    }
+
+    if (onSaveQuiz) {
+      const saved = await onSaveQuiz({
+        id: currentQuizId,
+        title: title.trim() || 'Untitled Quiz',
+        questions,
+      });
+      if (saved && saved.id) {
+        setCurrentQuizId(saved.id);
+      }
+      setSavedFeedback(true);
+      setTimeout(() => setSavedFeedback(false), 2500);
+    }
+  };
+
   const handleLaunch = () => {
     // Validate
     for (let i = 0; i < questions.length; i++) {
@@ -154,6 +189,24 @@ export function QuizEditor({ initialQuiz, onStartRoom, onBack, onOpenAIGenerator
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+          <button
+            type="button"
+            onClick={handleSave}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 transition cursor-pointer"
+          >
+            {savedFeedback ? (
+              <>
+                <Check className="w-4 h-4 text-emerald-400" />
+                <span className="text-emerald-300">Saved to Library!</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 text-indigo-400" />
+                <span>Save Quiz</span>
+              </>
+            )}
+          </button>
+
           <button
             onClick={onOpenAIGenerator}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-400 hover:to-pink-400 text-white font-bold text-sm shadow-md shadow-orange-500/20 transition cursor-pointer"

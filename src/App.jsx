@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Navbar } from './components/Common/Navbar.jsx';
 import { HostDashboard } from './components/Host/HostDashboard.jsx';
 import { QuizEditor } from './components/Host/QuizEditor.jsx';
@@ -16,6 +16,8 @@ import {
   joinRoom,
   submitAnswer,
   generateRoomCode,
+  saveQuizToLibrary,
+  recordGameHistory,
 } from './services/firebase.js';
 import { useRoomSync } from './hooks/useRoomSync.js';
 import { botSimulator } from './services/mockBots.js';
@@ -43,6 +45,7 @@ export function App() {
   const [activeHostQuiz, setActiveHostQuiz] = useState(null);
   const [hostRoomCode, setHostRoomCode] = useState(null);
   const [showAIModal, setShowAIModal] = useState(false);
+  const recordedRoomsRef = useRef(new Set());
 
   // Handle AI generator result
   const handleAIGenerated = (quizData) => {
@@ -210,6 +213,27 @@ export function App() {
   };
 
   const handleHostFinishGame = async () => {
+    if (room && !recordedRoomsRef.current.has(room.roomCode)) {
+      recordedRoomsRef.current.add(room.roomCode);
+      const rawPlayers = room?.players ? Object.entries(room.players) : [];
+      const sortedPlayers = rawPlayers
+        .map(([id, data]) => ({ id, ...data }))
+        .sort((a, b) => (b.score || 0) - (a.score || 0));
+
+      try {
+        await recordGameHistory({
+          roomCode: room.roomCode,
+          title: room.title || 'Live Quiz',
+          totalQuestions: room.questions?.length || 0,
+          totalPlayers: sortedPlayers.length,
+          topScorers: sortedPlayers.slice(0, 3),
+          leaderboard: sortedPlayers,
+        });
+      } catch (err) {
+        console.warn('Could not record game history:', err);
+      }
+    }
+
     await dispatchUpdate({
       status: 'FINISHED',
     });
@@ -317,6 +341,9 @@ export function App() {
               <QuizEditor
                 initialQuiz={activeHostQuiz}
                 onStartRoom={handleHostStartRoom}
+                onSaveQuiz={async (quiz) => {
+                  return await saveQuizToLibrary(quiz);
+                }}
                 onBack={() => setHostMode('dashboard')}
                 onOpenAIGenerator={() => setShowAIModal(true)}
               />
