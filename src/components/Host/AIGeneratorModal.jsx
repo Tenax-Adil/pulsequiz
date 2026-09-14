@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { X, Sparkles, Loader2, Check, ArrowRight, Wand2, Lightbulb } from 'lucide-react';
+import { Sparkles, X, Wand2, Loader2, Check, Lightbulb } from 'lucide-react';
 import { generateQuizWithGemini } from '../../services/gemini.js';
+import { Button } from '../ui/button.jsx';
+import { Badge } from '../ui/badge.jsx';
+import { Input } from '../ui/input.jsx';
 
 const TOPIC_SUGGESTIONS = [
-  'Modern Web Dev & React',
-  'Cybersecurity & Ethical Hacking',
-  'Space Exploration & Astronomy',
-  'Machine Learning & AI Concepts',
-  '90s Pop Culture & Video Games',
-  'World Capitals & Flags'
+  'JavaScript & React Core Concepts',
+  'World Capitals & Currencies',
+  'Solar System & Astrophysics',
+  '2000s Pop Music & Billboard Hits',
+  'Cybersecurity & Web Protocols',
+  'Marvel Cinematic Universe',
 ];
 
 export function AIGeneratorModal({ isOpen, onClose, onGenerated }) {
@@ -22,7 +25,7 @@ export function AIGeneratorModal({ isOpen, onClose, onGenerated }) {
   if (!isOpen) return null;
 
   const handleGenerate = async (e) => {
-    if (e) e.preventDefault();
+    e.preventDefault();
     if (!topic.trim()) return;
 
     setLoading(true);
@@ -31,12 +34,12 @@ export function AIGeneratorModal({ isOpen, onClose, onGenerated }) {
     try {
       const questions = await generateQuizWithGemini({
         topic: topic.trim(),
-        questionCount: count,
+        count,
         difficulty,
       });
 
       if (!questions || questions.length === 0) {
-        throw new Error('No questions could be generated. Please try again.');
+        throw new Error('AI could not generate questions. Please try a different topic.');
       }
 
       setGeneratedQuestions(questions);
@@ -59,59 +62,55 @@ export function AIGeneratorModal({ isOpen, onClose, onGenerated }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-8 shadow-2xl my-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
+      <div className="relative w-full max-w-xl bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-7 shadow-2xl my-6">
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
+          className="absolute top-4 right-4 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition cursor-pointer"
         >
-          <X className="w-6 h-6" />
+          <X className="w-5 h-5" />
         </button>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-pink-500 p-0.5 shadow-lg shadow-orange-500/20">
-            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-amber-400" />
-            </div>
+          <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center text-zinc-200">
+            <Sparkles className="w-5 h-5 text-zinc-300" />
           </div>
           <div>
-            <h3 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+            <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
               Gemini AI Quiz Creator
             </h3>
-            <p className="text-xs text-slate-400">
-              Generate structured, high-energy live trivia in seconds using Google Gemini
+            <p className="text-xs text-zinc-400">
+              Generate structured questions automatically using Google Gemini
             </p>
           </div>
         </div>
 
         {!generatedQuestions ? (
-          <form onSubmit={handleGenerate} className="space-y-6">
+          <form onSubmit={handleGenerate} className="space-y-5">
             <div>
-              <label className="block text-sm font-bold text-slate-200 mb-2">
-                Quiz Topic or Theme
+              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-300 mb-1.5">
+                Topic or Prompt
               </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. JavaScript Frameworks, Ancient Rome, Marvel Cinematic Universe"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-2xl px-5 py-3.5 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-base"
-                />
-              </div>
+              <Input
+                type="text"
+                required
+                placeholder="e.g. World Capitals, Modern JavaScript, Space Exploration"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                className="h-11 text-zinc-100 placeholder:text-zinc-500"
+              />
 
-              {/* Quick Suggestion Pills */}
-              <div className="mt-3 flex flex-wrap gap-2 items-center">
-                <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
-                  <Lightbulb className="w-3 h-3 text-amber-400" /> Ideas:
+              {/* Suggestions */}
+              <div className="mt-2.5 flex flex-wrap gap-1.5 items-center">
+                <span className="text-[11px] text-zinc-500 flex items-center gap-1">
+                  <Lightbulb className="w-3 h-3 text-zinc-400" /> Suggestions:
                 </span>
                 {TOPIC_SUGGESTIONS.map((sug) => (
                   <button
                     key={sug}
                     type="button"
                     onClick={() => setTopic(sug)}
-                    className="text-xs px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer border border-slate-700/60"
+                    className="text-[11px] px-2 py-0.5 rounded-md bg-zinc-950/70 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition cursor-pointer border border-zinc-800"
                   >
                     {sug}
                   </button>
@@ -119,38 +118,36 @@ export function AIGeneratorModal({ isOpen, onClose, onGenerated }) {
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
                     Question Count (1 to 50)
                   </label>
-                  <span className="text-sm font-black font-mono text-indigo-400 bg-slate-950 px-3 py-1 rounded-xl border border-slate-800">
+                  <span className="text-xs font-mono font-semibold text-zinc-200 bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800">
                     {count} Questions
                   </span>
                 </div>
 
-                {/* Smooth 1-50 Range Slider */}
                 <input
                   type="range"
                   min={1}
                   max={50}
                   value={count}
                   onChange={(e) => setCount(parseInt(e.target.value, 10))}
-                  className="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-950 rounded-lg mb-3"
+                  className="w-full accent-zinc-200 cursor-pointer h-1.5 bg-zinc-950 rounded-lg mb-2"
                 />
 
-                {/* Quick Presets */}
-                <div className="flex gap-2">
+                <div className="flex gap-1.5">
                   {[5, 10, 20, 35, 50].map((num) => (
                     <button
                       key={num}
                       type="button"
                       onClick={() => setCount(num)}
-                      className={`flex-1 py-2 rounded-xl font-bold text-xs transition cursor-pointer ${
+                      className={`flex-1 py-1 rounded-lg text-xs font-medium transition cursor-pointer border ${
                         count === num
-                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                          ? 'bg-zinc-100 text-zinc-950 border-zinc-100 font-semibold'
+                          : 'bg-zinc-950/60 text-zinc-400 border-zinc-800 hover:bg-zinc-800'
                       }`}
                     >
                       {num}
@@ -160,8 +157,8 @@ export function AIGeneratorModal({ isOpen, onClose, onGenerated }) {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-                  Difficulty
+                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
+                  Difficulty Level
                 </label>
                 <div className="flex gap-2">
                   {['easy', 'medium', 'hard'].map((diff) => (
@@ -169,10 +166,10 @@ export function AIGeneratorModal({ isOpen, onClose, onGenerated }) {
                       key={diff}
                       type="button"
                       onClick={() => setDifficulty(diff)}
-                      className={`flex-1 py-2.5 rounded-xl font-bold text-sm capitalize transition cursor-pointer ${
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-medium capitalize transition cursor-pointer border ${
                         difficulty === diff
-                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                          ? 'bg-zinc-100 text-zinc-950 border-zinc-100 font-semibold'
+                          : 'bg-zinc-950/60 text-zinc-400 border-zinc-800 hover:bg-zinc-800'
                       }`}
                     >
                       {diff}
@@ -183,68 +180,68 @@ export function AIGeneratorModal({ isOpen, onClose, onGenerated }) {
             </div>
 
             {error && (
-              <div className="p-4 bg-rose-950/50 border border-rose-800/50 text-rose-300 rounded-2xl text-xs">
+              <div className="p-3 bg-red-950/40 border border-red-900/50 text-red-300 rounded-xl text-xs">
                 {error}
               </div>
             )}
 
             <div className="pt-2">
-              <button
+              <Button
                 type="submit"
                 disabled={loading || !topic.trim()}
-                className="w-full py-4 px-6 bg-gradient-to-r from-amber-500 via-orange-600 to-pink-600 hover:from-amber-400 hover:to-pink-500 text-white font-extrabold text-lg rounded-2xl transition shadow-xl shadow-orange-500/25 flex items-center justify-center gap-3 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-semibold h-11 shadow-sm"
               >
                 {loading ? (
                   <>
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <span>Gemini is generating your quiz...</span>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    <span>Generating Questions with Gemini...</span>
                   </>
                 ) : (
                   <>
-                    <Wand2 className="w-5 h-5" />
+                    <Wand2 className="w-4 h-4 mr-2" />
                     <span>Generate Quiz</span>
                   </>
                 )}
-              </button>
+              </Button>
             </div>
           </form>
         ) : (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between bg-emerald-950/40 border border-emerald-500/30 p-4 rounded-2xl">
-              <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
-                <Check className="w-5 h-5 text-emerald-400" />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between bg-zinc-950/70 border border-zinc-800 p-3 rounded-xl">
+              <div className="flex items-center gap-2 text-zinc-200 text-xs font-medium">
+                <Check className="w-4 h-4 text-emerald-400" />
                 <span>Generated {generatedQuestions.length} questions for &quot;{topic}&quot;</span>
               </div>
               <button
                 onClick={() => setGeneratedQuestions(null)}
-                className="text-xs text-slate-400 hover:text-white underline"
+                className="text-xs text-zinc-400 hover:text-white underline cursor-pointer"
               >
-                Regenerate
+                Change Topic
               </button>
             </div>
 
-            <div className="max-h-72 overflow-y-auto space-y-3 pr-2">
+            <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
               {generatedQuestions.map((q, idx) => (
                 <div
-                  key={q.id || idx}
-                  className="bg-slate-950/80 border border-slate-800 p-4 rounded-2xl space-y-2"
+                  key={idx}
+                  className="bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-3"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="text-sm font-bold text-white">
-                      Q{idx + 1}. {q.text}
+                  <div className="flex items-start gap-2 mb-2">
+                    <span className="w-5 h-5 rounded bg-zinc-800 flex items-center justify-center text-[10px] font-mono font-bold text-zinc-400 shrink-0">
+                      {idx + 1}
                     </span>
-                    <span className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full shrink-0">
-                      {q.timeLimit}s
+                    <span className="text-xs font-medium text-zinc-200">
+                      {q.text}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="grid grid-cols-2 gap-1 pl-7">
                     {q.options.map((opt, oIdx) => (
                       <div
                         key={oIdx}
-                        className={`p-2 rounded-lg border ${
+                        className={`text-[11px] px-2 py-1 rounded truncate border ${
                           oIdx === q.correctOptionIndex
-                            ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300 font-semibold'
-                            : 'bg-slate-900 border-slate-800 text-slate-400'
+                            ? 'bg-emerald-950/40 border-emerald-800 text-emerald-300 font-medium'
+                            : 'bg-zinc-900/50 border-zinc-800 text-zinc-400'
                         }`}
                       >
                         {opt}
@@ -255,20 +252,22 @@ export function AIGeneratorModal({ isOpen, onClose, onGenerated }) {
               ))}
             </div>
 
-            <div className="flex gap-3 pt-2">
-              <button
+            <div className="flex justify-end gap-2 pt-2 border-t border-zinc-800">
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setGeneratedQuestions(null)}
-                className="w-1/3 py-3.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-2xl transition cursor-pointer"
+                className="border-zinc-800"
               >
-                Back
-              </button>
-              <button
+                Regenerate
+              </Button>
+              <Button
+                size="sm"
                 onClick={handleApply}
-                className="flex-1 py-3.5 px-6 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-base rounded-2xl transition shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2 cursor-pointer"
+                className="bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-semibold"
               >
-                <span>Use These Questions</span>
-                <ArrowRight className="w-5 h-5" />
-              </button>
+                Load into Editor
+              </Button>
             </div>
           </div>
         )}
@@ -276,3 +275,5 @@ export function AIGeneratorModal({ isOpen, onClose, onGenerated }) {
     </div>
   );
 }
+
+export default AIGeneratorModal;

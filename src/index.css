@@ -4,16 +4,20 @@
   :root {
     --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 6%;
+    --card-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
   }
 
   body {
     font-family: var(--font-body);
-    background-color: #030712;
-    background-image: 
-      radial-gradient(at 10% 10%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
-      radial-gradient(at 90% 10%, rgba(236, 72, 153, 0.08) 0px, transparent 50%),
-      radial-gradient(at 50% 90%, rgba(139, 92, 246, 0.06) 0px, transparent 60%);
-    background-attachment: fixed;
+    background-color: #09090b;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 24px 24px;
+    color: #f4f4f5;
     min-height: 100vh;
   }
 
@@ -22,43 +26,35 @@
   }
 }
 
-/* Kahoot Signature Vibrant Color Palette */
+/* Refined, Clean Game Option Colors (Less Neon, Professional Modern Tint) */
 :root {
-  --kahoot-red: #e21b3c;
-  --kahoot-blue: #1368ce;
-  --kahoot-yellow: #d89e00;
-  --kahoot-green: #26890c;
-  --kahoot-purple: #864cbf;
+  --opt-red: #e11d48;
+  --opt-blue: #2563eb;
+  --opt-yellow: #d97706;
+  --opt-green: #16a34a;
 }
 
-/* Glassmorphism & Custom Highlights */
-.glass-panel {
-  background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+/* Shadcn-Style Glass and Card Utilities */
+.shadcn-card {
+  background: rgba(18, 18, 20, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.glass-card {
-  background: rgba(17, 24, 39, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.glass-card-interactive {
-  background: rgba(17, 24, 39, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+.shadcn-card-interactive {
+  background: rgba(18, 18, 20, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.07);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.glass-card-interactive:hover {
-  background: rgba(24, 32, 54, 0.8);
-  border-color: rgba(129, 140, 248, 0.4);
-  transform: translateY(-3px);
-  box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.5), 0 0 25px -5px rgba(99, 102, 241, 0.15);
+.shadcn-card-interactive:hover {
+  background: rgba(24, 24, 27, 0.95);
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.7);
 }
 
 .glass-glow {

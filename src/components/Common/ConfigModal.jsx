@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Key, Database, Cloud, Check, Sparkles, AlertCircle, Lock } from 'lucide-react';
+import { X, Key, Database, Cloud, Check, Sparkles, Lock } from 'lucide-react';
 import { isFirebaseLive } from '../../services/firebase.js';
+import { Button } from '../ui/button.jsx';
+import { Input } from '../ui/input.jsx';
+import { Badge } from '../ui/badge.jsx';
 
 export function ConfigModal({ isOpen, onClose }) {
   const [firebaseApiKey, setFirebaseApiKey] = useState('');
@@ -15,7 +18,6 @@ export function ConfigModal({ isOpen, onClose }) {
   useEffect(() => {
     if (!isOpen) return;
 
-    // Load from localStorage or env
     setGeminiKey(localStorage.getItem('pulse_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY || '');
     setCloudinaryCloud(localStorage.getItem('pulse_cloudinary_cloud') || import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '');
     setCloudinaryPreset(localStorage.getItem('pulse_cloudinary_preset') || import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '');
@@ -34,14 +36,12 @@ export function ConfigModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   const handleSave = () => {
-    // Save Gemini Key
     if (geminiKey.trim()) {
       localStorage.setItem('pulse_gemini_key', geminiKey.trim());
     } else {
       localStorage.removeItem('pulse_gemini_key');
     }
 
-    // Save Cloudinary
     if (cloudinaryCloud.trim()) {
       localStorage.setItem('pulse_cloudinary_cloud', cloudinaryCloud.trim());
     } else {
@@ -60,7 +60,6 @@ export function ConfigModal({ isOpen, onClose }) {
       localStorage.setItem('pulse_host_password', 'admin123');
     }
 
-    // Save Firebase config
     if (firebaseApiKey.trim() && firebaseDbUrl.trim()) {
       const fbConfig = {
         apiKey: firebaseApiKey.trim(),
@@ -76,7 +75,6 @@ export function ConfigModal({ isOpen, onClose }) {
     setTimeout(() => {
       setSavedSuccess(false);
       onClose();
-      // Reload window if Firebase config changed to initialize real Firebase client
       window.location.reload();
     }, 800);
   };
@@ -84,183 +82,157 @@ export function ConfigModal({ isOpen, onClose }) {
   const isLive = isFirebaseLive();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in overflow-y-auto">
-      <div className="relative w-full max-w-xl bg-slate-900 border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in overflow-y-auto">
+      <div className="relative w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-7 shadow-2xl my-8 text-zinc-100">
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
+          className="absolute top-4 right-4 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition cursor-pointer"
         >
-          <X className="w-6 h-6" />
+          <X className="w-5 h-5" />
         </button>
 
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-11 h-11 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-            <Key className="w-6 h-6" />
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center text-zinc-300">
+            <Key className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-2xl font-black text-white tracking-tight">
-              API & Cloud Services
+            <h3 className="text-lg font-bold text-white tracking-tight">
+              Host Settings &amp; API Keys
             </h3>
-            <p className="text-xs text-slate-400">
-              Configure managed cloud integrations or run with instant local sync
+            <p className="text-xs text-zinc-400">
+              Configure backend credentials, AI keys, and presenter password
             </p>
           </div>
         </div>
 
         {/* Realtime Status Banner */}
-        <div className={`p-4 rounded-2xl border mb-6 flex items-start gap-3 ${
-          isLive
-            ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300'
-            : 'bg-indigo-950/40 border-indigo-500/30 text-indigo-300'
-        }`}>
+        <div className="p-3 rounded-xl border border-zinc-800 bg-zinc-950/60 mb-5 flex items-start gap-2.5 text-xs">
           <div className="mt-0.5">
-            {isLive ? <Check className="w-5 h-5 text-emerald-400" /> : <Sparkles className="w-5 h-5 text-indigo-400" />}
+            <span className={`w-2 h-2 rounded-full inline-block ${isLive ? 'bg-emerald-400' : 'bg-blue-400'}`} />
           </div>
-          <div className="text-xs leading-relaxed">
-            <span className="font-bold block mb-0.5">
-              Active Sync Mode: {isLive ? 'Live Firebase Realtime Database' : 'Instant Zero-Config Realtime Sync'}
+          <div>
+            <span className="font-semibold text-zinc-200 block">
+              {isLive ? 'Connected: Firebase Realtime Database' : 'Active: Instant Local Broadcast Sync'}
             </span>
-            {isLive
-              ? 'Connected to your cloud Firebase database. Up to 200 simultaneous users can join from any network.'
-              : 'Zero setup required! Syncs Host and Student tabs across browser windows seamlessly.'}
+            <span className="text-zinc-400 text-[11px]">
+              {isLive
+                ? 'Cloud synchronization active across different networks and devices.'
+                : 'Zero-config local multi-tab sync active.'}
+            </span>
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Section 1: Google Gemini AI */}
-          <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/60">
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-bold text-white flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-400" /> Google Gemini API Key
+          <div className="bg-zinc-950/60 p-3.5 rounded-xl border border-zinc-800/80">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-zinc-400" /> Google Gemini API Key
               </label>
               <a
                 href="https://aistudio.google.com/app/apikey"
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs text-indigo-400 hover:text-indigo-300 underline"
+                className="text-[11px] text-zinc-400 hover:text-zinc-200 underline"
               >
-                Get Free Key
+                Get Key
               </a>
             </div>
-            <input
+            <Input
               type="password"
               placeholder="AIzaSy..."
               value={geminiKey}
               onChange={(e) => setGeminiKey(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono"
+              className="h-9 font-mono text-xs"
             />
-            <p className="text-xs text-slate-400 mt-2">
-              Enables 1-click AI quiz generation with Gemini 2.0 / 1.5 JSON structured mode.
-            </p>
           </div>
 
           {/* Section 2: Firebase Realtime Database */}
-          <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/60">
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-bold text-white flex items-center gap-2">
-                <Database className="w-4 h-4 text-emerald-400" /> Firebase Realtime Database
+          <div className="bg-zinc-950/60 p-3.5 rounded-xl border border-zinc-800/80">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+                <Database className="w-3.5 h-3.5 text-zinc-400" /> Firebase Realtime Database
               </label>
               <a
                 href="https://console.firebase.google.com/"
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs text-indigo-400 hover:text-indigo-300 underline"
+                className="text-[11px] text-zinc-400 hover:text-zinc-200 underline"
               >
-                Firebase Console
+                Console
               </a>
             </div>
-            <div className="space-y-3">
-              <input
+            <div className="space-y-2">
+              <Input
                 type="text"
-                placeholder="Database URL (e.g. https://my-quiz-rtdb.firebaseio.com)"
+                placeholder="Database URL (e.g. https://...firebaseio.com)"
                 value={firebaseDbUrl}
                 onChange={(e) => setFirebaseDbUrl(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono"
+                className="h-9 font-mono text-xs"
               />
               <div className="grid grid-cols-2 gap-2">
-                <input
+                <Input
                   type="password"
-                  placeholder="Firebase API Key"
+                  placeholder="API Key"
                   value={firebaseApiKey}
                   onChange={(e) => setFirebaseApiKey(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono"
+                  className="h-9 font-mono text-xs"
                 />
-                <input
+                <Input
                   type="text"
-                  placeholder="Project ID (optional)"
+                  placeholder="Project ID"
                   value={firebaseProjectId}
                   onChange={(e) => setFirebaseProjectId(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono"
+                  className="h-9 font-mono text-xs"
                 />
               </div>
             </div>
           </div>
 
-          {/* Section 3: Cloudinary / Image Storage */}
-          <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/60">
-            <label className="text-sm font-bold text-white flex items-center gap-2 mb-2">
-              <Cloud className="w-4 h-4 text-sky-400" /> Cloudinary Media Storage (Optional)
+          {/* Section 3: Host Passcode */}
+          <div className="bg-zinc-950/60 p-3.5 rounded-xl border border-zinc-800/80">
+            <label className="block text-xs font-semibold text-zinc-300 mb-1.5 flex items-center gap-1.5">
+              <Lock className="w-3.5 h-3.5 text-zinc-400" /> Host Passcode
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                type="text"
-                placeholder="Cloud Name"
-                value={cloudinaryCloud}
-                onChange={(e) => setCloudinaryCloud(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono"
-              />
-              <input
-                type="text"
-                placeholder="Upload Preset"
-                value={cloudinaryPreset}
-                onChange={(e) => setCloudinaryPreset(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono"
-              />
-            </div>
-            <p className="text-xs text-slate-400 mt-2">
-              If left blank, questions will automatically use compressed client-side local images or Unsplash URLs.
-            </p>
-          </div>
-
-          {/* Section 4: Host Passcode Protection */}
-          <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/60">
-            <label className="text-sm font-bold text-white flex items-center gap-2 mb-2">
-              <Lock className="w-4 h-4 text-purple-400" /> Host Control Passcode
-            </label>
-            <input
+            <Input
               type="text"
               placeholder="admin123"
               value={hostPassword}
               onChange={(e) => setHostPassword(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono"
+              className="h-9 font-mono text-xs"
             />
-            <p className="text-xs text-slate-400 mt-2">
-              Secures the presenter dashboard so students cannot access or control quiz rounds.
-            </p>
+            <span className="text-[11px] text-zinc-500 block mt-1">
+              Protects host studio from student access
+            </span>
           </div>
         </div>
 
-        <div className="flex gap-3 mt-8">
-          <button
+        <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-zinc-800">
+          <Button
+            variant="outline"
+            size="sm"
             onClick={onClose}
-            className="w-1/3 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl transition cursor-pointer"
+            className="border-zinc-800 text-xs"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
             onClick={handleSave}
-            className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 cursor-pointer"
+            className="bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-semibold text-xs"
           >
             {savedSuccess ? (
               <>
-                <Check className="w-5 h-5" /> Saved & Reloading...
+                <Check className="w-4 h-4 mr-1 text-emerald-600" /> Saved!
               </>
             ) : (
-              'Save & Apply Configuration'
+              'Save & Apply'
             )}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
   );
 }
+
+export default ConfigModal;

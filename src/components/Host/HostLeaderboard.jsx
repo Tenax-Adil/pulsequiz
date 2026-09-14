@@ -2,15 +2,15 @@ import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import {
   Trophy,
-  Medal,
   Flame,
   ArrowRight,
   RotateCcw,
   Sparkles,
-  Award,
   Crown
 } from 'lucide-react';
 import { soundFx } from '../../services/audio.js';
+import { Button } from '../ui/button.jsx';
+import { Badge } from '../ui/badge.jsx';
 
 export function HostLeaderboard({
   room,
@@ -32,25 +32,24 @@ export function HostLeaderboard({
   const top1 = sortedPlayers[0];
   const top2 = sortedPlayers[1];
   const top3 = sortedPlayers[2];
-  const runnersUp = sortedPlayers.slice(3, 10);
 
   // Trigger fanfare and confetti on final podium
   useEffect(() => {
     if (isFinal) {
       soundFx.playFanfare();
 
-      const duration = 4.5 * 1000;
+      const duration = 3.5 * 1000;
       const animationEnd = Date.now() + duration;
 
       const frame = () => {
         confetti({
-          particleCount: 4,
+          particleCount: 3,
           angle: 60,
           spread: 55,
           origin: { x: 0 },
         });
         confetti({
-          particleCount: 4,
+          particleCount: 3,
           angle: 120,
           spread: 55,
           origin: { x: 1 },
@@ -65,22 +64,22 @@ export function HostLeaderboard({
   }, [isFinal]);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 flex flex-col min-h-[calc(100vh-5rem)] justify-between">
+    <div className="max-w-4xl mx-auto px-4 py-8 flex flex-col min-h-[calc(100vh-5rem)] justify-between animate-fade-in-up">
       {/* Top Banner */}
       <div className="text-center mb-6">
-        <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-indigo-950/80 border border-indigo-800 text-indigo-300 text-xs font-bold uppercase tracking-widest mb-2">
+        <Badge variant="secondary" className="gap-1.5 px-3 py-1 mb-2 bg-zinc-900 border-zinc-800 text-zinc-300">
           {isFinal ? (
             <>
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Final Quiz Podium
+              <Sparkles className="w-3.5 h-3.5 text-zinc-400" /> Final Tournament Results
             </>
           ) : (
             <>
-              <Trophy className="w-3.5 h-3.5 text-amber-400" /> Round {currentIdx + 1} of {totalQuestions} Leaderboard
+              <Trophy className="w-3.5 h-3.5 text-zinc-400" /> Round {currentIdx + 1} of {totalQuestions}
             </>
           )}
-        </div>
-        <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-          {isFinal ? 'Tournament Champions' : 'Current Standings'}
+        </Badge>
+        <h2 className="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+          {isFinal ? 'Podium Champions' : 'Current Standings'}
         </h2>
       </div>
 
@@ -88,20 +87,20 @@ export function HostLeaderboard({
       {isFinal ? (
         /* Final Podium 1st, 2nd, 3rd View */
         <div className="my-6">
-          <div className="flex items-end justify-center gap-3 sm:gap-6 max-w-2xl mx-auto h-72 sm:h-80 mb-8">
+          <div className="flex items-end justify-center gap-3 sm:gap-6 max-w-xl mx-auto h-64 sm:h-72 mb-6">
             {/* 2nd Place */}
             {top2 && (
               <div className="flex-1 flex flex-col items-center">
                 <div className="text-2xl mb-1">{top2.avatar || '🥈'}</div>
-                <div className="text-xs sm:text-sm font-bold text-slate-200 truncate max-w-[90px] sm:max-w-[120px]">
+                <div className="text-xs sm:text-sm font-semibold text-zinc-300 truncate max-w-[90px] sm:max-w-[120px]">
                   {top2.nickname}
                 </div>
-                <div className="text-xs text-indigo-400 font-mono font-bold mb-2">
+                <div className="text-xs text-zinc-400 font-mono font-semibold mb-2">
                   {top2.score} pts
                 </div>
-                <div className="w-full h-36 sm:h-44 bg-gradient-to-t from-slate-800 to-slate-700 rounded-t-2xl border-t-4 border-slate-400 shadow-xl flex flex-col items-center justify-start pt-3">
-                  <span className="text-3xl sm:text-4xl font-black text-slate-300">2</span>
-                  <span className="text-[10px] uppercase font-bold text-slate-400">Silver</span>
+                <div className="w-full h-32 sm:h-40 bg-zinc-800 rounded-t-xl border border-zinc-700/80 shadow-md flex flex-col items-center justify-start pt-3">
+                  <span className="text-2xl sm:text-3xl font-bold text-zinc-300">2</span>
+                  <span className="text-[10px] uppercase font-semibold text-zinc-400">Silver</span>
                 </div>
               </div>
             )}
@@ -109,17 +108,17 @@ export function HostLeaderboard({
             {/* 1st Place Champion */}
             {top1 && (
               <div className="flex-1 flex flex-col items-center">
-                <Crown className="w-8 h-8 text-amber-400 animate-bounce mb-1" />
+                <Crown className="w-7 h-7 text-zinc-200 mb-1" />
                 <div className="text-3xl mb-1">{top1.avatar || '🏆'}</div>
-                <div className="text-sm sm:text-base font-extrabold text-amber-300 truncate max-w-[100px] sm:max-w-[140px]">
+                <div className="text-sm sm:text-base font-bold text-white truncate max-w-[100px] sm:max-w-[140px]">
                   {top1.nickname}
                 </div>
-                <div className="text-xs text-amber-400 font-mono font-black mb-2">
+                <div className="text-xs text-zinc-200 font-mono font-bold mb-2">
                   {top1.score} pts
                 </div>
-                <div className="w-full h-48 sm:h-56 bg-gradient-to-t from-amber-600/60 via-amber-500/80 to-amber-400 rounded-t-2xl border-t-4 border-amber-300 shadow-2xl shadow-amber-500/30 flex flex-col items-center justify-start pt-4">
-                  <span className="text-4xl sm:text-5xl font-black text-slate-950">1</span>
-                  <span className="text-[10px] uppercase font-black text-slate-950 tracking-wider">Champion</span>
+                <div className="w-full h-44 sm:h-52 bg-zinc-700/90 rounded-t-xl border-t-2 border-zinc-300 shadow-xl flex flex-col items-center justify-start pt-3">
+                  <span className="text-3xl sm:text-4xl font-bold text-white">1</span>
+                  <span className="text-[10px] uppercase font-bold text-zinc-200 tracking-wider">Champion</span>
                 </div>
               </div>
             )}
@@ -128,15 +127,15 @@ export function HostLeaderboard({
             {top3 && (
               <div className="flex-1 flex flex-col items-center">
                 <div className="text-2xl mb-1">{top3.avatar || '🥉'}</div>
-                <div className="text-xs sm:text-sm font-bold text-slate-200 truncate max-w-[90px] sm:max-w-[120px]">
+                <div className="text-xs sm:text-sm font-semibold text-zinc-300 truncate max-w-[90px] sm:max-w-[120px]">
                   {top3.nickname}
                 </div>
-                <div className="text-xs text-amber-600 font-mono font-bold mb-2">
+                <div className="text-xs text-zinc-400 font-mono font-semibold mb-2">
                   {top3.score} pts
                 </div>
-                <div className="w-full h-28 sm:h-36 bg-gradient-to-t from-amber-950/80 to-amber-900/90 rounded-t-2xl border-t-4 border-amber-700 shadow-xl flex flex-col items-center justify-start pt-3">
-                  <span className="text-3xl sm:text-4xl font-black text-amber-500">3</span>
-                  <span className="text-[10px] uppercase font-bold text-amber-600">Bronze</span>
+                <div className="w-full h-24 sm:h-32 bg-zinc-850 rounded-t-xl border border-zinc-800 shadow-md flex flex-col items-center justify-start pt-3">
+                  <span className="text-2xl sm:text-3xl font-bold text-zinc-400">3</span>
+                  <span className="text-[10px] uppercase font-semibold text-zinc-500">Bronze</span>
                 </div>
               </div>
             )}
@@ -144,40 +143,36 @@ export function HostLeaderboard({
         </div>
       ) : (
         /* Interstitial Leaderboard List */
-        <div className="max-w-3xl w-full mx-auto space-y-2.5 my-4">
+        <div className="max-w-2xl w-full mx-auto space-y-2 my-4">
           {sortedPlayers.slice(0, 6).map((player, idx) => (
             <div
               key={player.id || idx}
-              className={`flex items-center justify-between p-4 rounded-2xl border transition ${
+              className={`flex items-center justify-between p-3.5 rounded-xl border transition ${
                 idx === 0
-                  ? 'bg-amber-950/30 border-amber-500/50 shadow-lg shadow-amber-500/10'
-                  : 'bg-slate-900/80 border-slate-800'
+                  ? 'bg-zinc-850 border-zinc-700 shadow-sm'
+                  : 'bg-zinc-900/60 border-zinc-800'
               }`}
             >
-              <div className="flex items-center gap-4 min-w-0">
+              <div className="flex items-center gap-3 min-w-0">
                 <div
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm ${
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center font-mono font-bold text-xs ${
                     idx === 0
-                      ? 'bg-amber-400 text-slate-950'
-                      : idx === 1
-                      ? 'bg-slate-300 text-slate-950'
-                      : idx === 2
-                      ? 'bg-amber-700 text-white'
-                      : 'bg-slate-800 text-slate-400'
+                      ? 'bg-zinc-100 text-zinc-950'
+                      : 'bg-zinc-800 text-zinc-400'
                   }`}
                 >
                   {idx + 1}
                 </div>
 
-                <div className="text-2xl">{player.avatar || '⚡'}</div>
+                <div className="text-xl">{player.avatar || '⚡'}</div>
 
                 <div className="min-w-0">
-                  <span className="text-base font-bold text-white block truncate">
+                  <span className="text-sm font-semibold text-white block truncate">
                     {player.nickname}
                   </span>
                   {player.streak > 1 && (
-                    <span className="text-xs text-orange-400 font-bold flex items-center gap-1">
-                      <Flame className="w-3.5 h-3.5 fill-orange-400 text-orange-400" />
+                    <span className="text-[11px] text-zinc-400 flex items-center gap-1">
+                      <Flame className="w-3 h-3 fill-zinc-400 text-zinc-400" />
                       {player.streak} Streak
                     </span>
                   )}
@@ -185,11 +180,11 @@ export function HostLeaderboard({
               </div>
 
               <div className="text-right">
-                <div className="text-xl font-black text-white font-mono">
+                <div className="text-base font-bold text-white font-mono">
                   {player.score || 0}
                 </div>
                 {player.lastRoundPoints > 0 && (
-                  <div className="text-xs font-bold text-emerald-400">
+                  <div className="text-xs font-semibold text-emerald-400">
                     +{player.lastRoundPoints}
                   </div>
                 )}
@@ -200,36 +195,42 @@ export function HostLeaderboard({
       )}
 
       {/* Bottom Host Advance Controls */}
-      <div className="flex items-center justify-between pt-6 border-t border-slate-800">
-        <button
+      <div className="flex items-center justify-between pt-5 border-t border-zinc-800">
+        <Button
+          variant="outline"
+          size="sm"
           onClick={onRestart}
-          className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 text-sm font-bold transition cursor-pointer"
+          className="border-zinc-800 text-zinc-400 hover:text-white"
         >
-          <RotateCcw className="w-4 h-4" />
+          <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
           <span>Exit / New Quiz</span>
-        </button>
+        </Button>
 
         {!isFinal ? (
           isLastQuestion ? (
-            <button
+            <Button
+              size="lg"
               onClick={onFinishGame}
-              className="flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-400 hover:to-pink-400 text-white font-black text-base shadow-xl shadow-orange-500/25 transition transform hover:scale-[1.02] cursor-pointer"
+              className="bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-bold px-6 shadow-sm"
             >
-              <Trophy className="w-5 h-5 text-amber-200" />
+              <Trophy className="w-4 h-4 mr-1.5" />
               <span>Final Podium</span>
-              <ArrowRight className="w-5 h-5" />
-            </button>
+              <ArrowRight className="w-4 h-4 ml-1.5" />
+            </Button>
           ) : (
-            <button
+            <Button
+              size="lg"
               onClick={onNextQuestion}
-              className="flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black text-base shadow-xl shadow-emerald-500/25 transition transform hover:scale-[1.02] cursor-pointer"
+              className="bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-bold px-6 shadow-sm"
             >
               <span>Next Question</span>
-              <ArrowRight className="w-5 h-5" />
-            </button>
+              <ArrowRight className="w-4 h-4 ml-1.5" />
+            </Button>
           )
         ) : null}
       </div>
     </div>
   );
 }
+
+export default HostLeaderboard;

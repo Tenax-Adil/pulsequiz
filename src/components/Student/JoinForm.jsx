@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Zap, ArrowRight, User, Hash, Sparkles, RefreshCw } from 'lucide-react';
+import { Zap, ArrowRight, User, Hash, RefreshCw } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card.jsx';
+import { Button } from '../ui/button.jsx';
+import { Input } from '../ui/input.jsx';
+import { Badge } from '../ui/badge.jsx';
 
 const AVATARS = ['🚀', '⚡', '🔥', '🦊', '🤖', '👾', '🌟', '🦄', '🎯', '🎸', '🕹️', '💎'];
 
@@ -42,58 +46,59 @@ export function JoinForm({ initialCode = '', onJoin, onReconnect, savedSession }
     <div className="max-w-md w-full mx-auto px-4 py-8 animate-fade-in-up">
       {/* Reconnection alert banner if student disconnected */}
       {savedSession && savedSession.roomCode && (
-        <div className="bg-indigo-950/80 border border-indigo-500/40 p-4 rounded-3xl mb-6 shadow-xl text-center backdrop-blur-md">
-          <div className="flex items-center justify-center gap-2 text-indigo-300 text-xs font-bold uppercase tracking-wider mb-1">
-            <RefreshCw className="w-3.5 h-3.5 text-pink-400" /> Active Session Found
+        <Card className="border-zinc-800 bg-zinc-900/90 p-4 mb-6 text-center">
+          <div className="flex items-center justify-center gap-1.5 text-zinc-300 text-xs font-semibold mb-1">
+            <RefreshCw className="w-3.5 h-3.5 text-zinc-400" /> Active Session Found
           </div>
-          <p className="text-xs text-slate-300 mb-3">
-            Resume as <span className="font-bold text-white">{savedSession.nickname}</span> in PIN{' '}
-            <span className="font-mono font-bold text-indigo-400">{savedSession.roomCode}</span>?
+          <p className="text-xs text-zinc-400 mb-3">
+            Resume as <span className="font-semibold text-zinc-100">{savedSession.nickname}</span> in PIN{' '}
+            <span className="font-mono font-semibold text-zinc-200">{savedSession.roomCode}</span>?
           </p>
           <div className="flex gap-2 justify-center">
-            <button
+            <Button
+              size="sm"
               onClick={() => onReconnect(savedSession)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition cursor-pointer"
+              className="bg-zinc-100 text-zinc-950 hover:bg-zinc-200 h-8"
             >
               Rejoin Room
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => {
                 localStorage.removeItem('pulse_student_session');
                 window.location.reload();
               }}
-              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs rounded-xl transition cursor-pointer"
+              className="border-zinc-800 h-8"
             >
               Dismiss
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       )}
 
-      {/* Main Join Card */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-md">
-        <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-pink-500 via-purple-600 to-indigo-500 p-0.5 shadow-xl shadow-pink-500/20 mx-auto mb-3">
-            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-              <Zap className="w-7 h-7 text-pink-400 fill-pink-400" />
-            </div>
+      {/* Main Join Card - Clean Shadcn Aesthetic */}
+      <Card className="border-zinc-800 bg-zinc-900/80 shadow-xl backdrop-blur-xl">
+        <CardHeader className="text-center pb-6">
+          <div className="w-12 h-12 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center mx-auto mb-3 shadow-sm">
+            <Zap className="w-5 h-5 text-zinc-200 fill-zinc-200" />
           </div>
-          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            Join Live Game
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Enter the 6-digit game PIN shown on the host screen
-          </p>
-        </div>
+          <CardTitle className="text-2xl font-bold tracking-tight text-white">
+            Join Quiz Game
+          </CardTitle>
+          <CardDescription className="text-xs text-zinc-400 mt-1">
+            Enter the 6-digit PIN displayed on the host screen
+          </CardDescription>
+        </CardHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Room PIN Input */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-              Game PIN
-            </label>
-            <div className="relative">
-              <input
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Room PIN Input */}
+            <div>
+              <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">
+                Room PIN
+              </label>
+              <Input
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
@@ -102,67 +107,68 @@ export function JoinForm({ initialCode = '', onJoin, onReconnect, savedSession }
                 value={roomCode}
                 onChange={(e) => setRoomCode(e.target.value.replace(/\D/g, ''))}
                 placeholder="000000"
-                className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-2xl py-3.5 px-4 text-center text-3xl font-mono font-black tracking-widest text-indigo-400 placeholder-slate-700 focus:outline-none transition shadow-inner"
+                className="text-center text-2xl font-mono font-bold tracking-widest text-zinc-100 placeholder:text-zinc-600 h-12"
               />
             </div>
-          </div>
 
-          {/* Nickname Input */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-              Your Nickname
-            </label>
-            <div className="relative">
-              <input
+            {/* Nickname Input */}
+            <div>
+              <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wider">
+                Nickname
+              </label>
+              <Input
                 type="text"
                 maxLength={18}
                 required
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
-                placeholder="e.g. SpeedRacer"
-                className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-2xl py-3.5 px-4 text-white text-base font-bold placeholder-slate-600 focus:outline-none transition"
+                placeholder="e.g. Alex"
+                className="h-11 text-zinc-100 placeholder:text-zinc-600 font-medium"
               />
             </div>
-          </div>
 
-          {/* Avatar Selector */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-              Choose Avatar
-            </label>
-            <div className="grid grid-cols-6 gap-2">
-              {AVATARS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => setSelectedAvatar(emoji)}
-                  className={`w-full aspect-square rounded-xl text-xl flex items-center justify-center transition cursor-pointer ${
-                    selectedAvatar === emoji
-                      ? 'bg-indigo-600 ring-2 ring-indigo-400 scale-110 shadow-lg'
-                      : 'bg-slate-950 hover:bg-slate-800'
-                  }`}
-                >
-                  {emoji}
-                </button>
-              ))}
+            {/* Avatar Selector */}
+            <div>
+              <label className="block text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider">
+                Player Icon
+              </label>
+              <div className="grid grid-cols-6 gap-2">
+                {AVATARS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => setSelectedAvatar(emoji)}
+                    className={`w-full aspect-square rounded-xl text-lg flex items-center justify-center transition cursor-pointer border ${
+                      selectedAvatar === emoji
+                        ? 'bg-zinc-800 border-zinc-400 scale-105 shadow-sm'
+                        : 'bg-zinc-950/60 border-zinc-800/80 hover:bg-zinc-850 hover:border-zinc-700'
+                    }`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {error && (
-            <div className="p-3.5 bg-rose-950/50 border border-rose-800/50 rounded-2xl text-rose-300 text-xs font-medium text-center">
-              {error}
-            </div>
-          )}
+            {error && (
+              <div className="p-3 bg-red-950/40 border border-red-900/50 rounded-xl text-red-300 text-xs font-medium text-center">
+                {error}
+              </div>
+            )}
 
-          <button
-            type="submit"
-            className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:from-pink-400 hover:to-indigo-500 text-white font-extrabold text-lg shadow-xl shadow-purple-600/30 transition transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer mt-2"
-          >
-            <span>Enter Lobby</span>
-            <ArrowRight className="w-5 h-5" />
-          </button>
-        </form>
-      </div>
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-bold h-12 mt-2 shadow-sm text-sm"
+            >
+              <span>Join Game</span>
+              <ArrowRight className="w-4 h-4 ml-1.5" />
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
+export default JoinForm;

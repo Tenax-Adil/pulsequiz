@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Sparkles,
   PlusCircle,
   Play,
   Wand2,
@@ -9,11 +8,16 @@ import {
   Trash2,
   Edit3,
   Calendar,
-  Check
+  Layers,
+  Sparkles,
+  ArrowUpRight
 } from 'lucide-react';
 import { AIGeneratorModal } from './AIGeneratorModal.jsx';
 import { QuizHistoryModal } from './QuizHistoryModal.jsx';
 import { fetchSavedQuizzes, deleteSavedQuiz, fetchGameHistory } from '../../services/firebase.js';
+import { Button } from '../ui/button.jsx';
+import { Badge } from '../ui/badge.jsx';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '../ui/card.jsx';
 
 export function HostDashboard({ onStartRoom, onEditQuiz }) {
   const [showAIModal, setShowAIModal] = useState(false);
@@ -79,153 +83,155 @@ export function HostDashboard({ onStartRoom, onEditQuiz }) {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 animate-fade-in-up">
-      {/* Sleek Presenter Control Center Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-8 mb-10 border-b border-slate-800/80">
+      {/* Executive Command Header - Shadcn Style */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 mb-8 border-b border-zinc-800">
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight font-heading">
-              Quiz Studio
+          <div className="flex items-center gap-2.5 mb-1.5">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+              Quiz Library
             </h1>
-            <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold tracking-wide flex items-center gap-1.5 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              Live Host Active
-            </span>
+            <Badge variant="outline" className="border-zinc-800 text-zinc-400 font-normal">
+              Host Panel
+            </Badge>
           </div>
-          <p className="text-sm text-slate-400 max-w-xl leading-relaxed">
-            Create custom quizzes, generate trivia with Gemini AI, and launch live interactive multiplayer rooms.
+          <p className="text-sm text-zinc-400 max-w-xl">
+            Create, manage, and launch multiplayer quiz sessions with real-time synchronization.
           </p>
         </div>
 
         {/* Action Controls */}
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={() => setShowAIModal(true)}
-            className="group relative flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 hover:from-amber-400 hover:to-pink-400 text-white font-extrabold text-sm shadow-lg shadow-orange-500/20 hover:shadow-orange-500/35 transition-all duration-300 transform hover:-translate-y-0.5 cursor-pointer"
-          >
-            <Wand2 className="w-4 h-4 transition-transform group-hover:rotate-12" />
-            <span>Generate with AI</span>
-          </button>
-
-          <button
-            onClick={handleCustomQuiz}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-indigo-500/50 text-white font-bold text-sm transition-all duration-300 transform hover:-translate-y-0.5 shadow-md hover:shadow-indigo-500/10 cursor-pointer"
-          >
-            <PlusCircle className="w-4 h-4 text-indigo-400" />
-            <span>Create Quiz</span>
-          </button>
-
-          <button
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            variant="outline"
             onClick={() => setShowHistoryModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white font-bold text-sm transition-all duration-300 cursor-pointer"
+            className="border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300"
           >
-            <History className="w-4 h-4 text-indigo-400" />
+            <History className="w-4 h-4 text-zinc-400" />
             <span>History</span>
             {gameHistory.length > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[11px] font-mono font-bold">
+              <span className="ml-1 px-1.5 py-0.5 rounded-md bg-zinc-800 text-zinc-300 text-[11px] font-mono font-medium">
                 {gameHistory.length}
               </span>
             )}
-          </button>
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={handleCustomQuiz}
+            className="border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-200"
+          >
+            <PlusCircle className="w-4 h-4 text-zinc-400" />
+            <span>New Quiz</span>
+          </Button>
+
+          <Button
+            onClick={() => setShowAIModal(true)}
+            className="bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-semibold shadow-sm"
+          >
+            <Sparkles className="w-4 h-4 text-zinc-900" />
+            <span>AI Generate</span>
+          </Button>
         </div>
       </div>
 
-      {/* MY SAVED QUIZZES (User Created & Saved) */}
+      {/* SAVED QUIZZES GRID */}
       {savedQuizzes.length > 0 ? (
-        <div className="mb-14">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-inner">
-                <BookOpen className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-black text-white tracking-tight">
-                  My Quiz Library ({savedQuizzes.length})
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Ready-to-launch quizzes stored securely in your library
-                </p>
-              </div>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">
+                Saved Quizzes
+              </h2>
+              <span className="text-xs text-zinc-400 font-mono">
+                ({savedQuizzes.length})
+              </span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {savedQuizzes.map((quiz) => (
-              <div
+              <Card
                 key={quiz.id}
-                className="glass-card-interactive rounded-3xl p-6 flex flex-col justify-between group relative overflow-hidden"
+                className="shadcn-card-interactive flex flex-col justify-between group overflow-hidden border-zinc-800/90"
               >
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-60 group-hover:opacity-100 transition" />
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-300 bg-indigo-950/80 px-2.5 py-1 rounded-lg border border-indigo-800/80">
-                      Saved Quiz
-                    </span>
+                <CardHeader className="p-5 pb-3">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <Badge variant="secondary" className="text-[11px] bg-zinc-800/80 text-zinc-300 border-zinc-700/60 font-medium">
+                      {quiz.questions?.length || 0} Questions
+                    </Badge>
                     <button
                       onClick={(e) => handleDeleteSaved(quiz.id, e)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-800/80 transition cursor-pointer"
+                      className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-zinc-800/60 transition opacity-60 group-hover:opacity-100 cursor-pointer"
                       title="Delete quiz"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
-                  <h3 className="text-xl font-bold text-white mb-2 group-hover:text-indigo-300 transition-colors line-clamp-2">
+                  <CardTitle className="text-base font-semibold text-zinc-100 group-hover:text-white transition-colors line-clamp-2">
                     {quiz.title}
-                  </h3>
+                  </CardTitle>
 
-                  <div className="flex items-center gap-2 text-xs text-slate-400 mb-6 font-mono">
-                    <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                  <CardDescription className="text-xs text-zinc-400 flex items-center gap-1.5 mt-2">
+                    <Calendar className="w-3 h-3 text-zinc-400" />
                     <span>{new Date(quiz.updatedAt || quiz.createdAt || Date.now()).toLocaleDateString()}</span>
-                  </div>
-                </div>
+                  </CardDescription>
+                </CardHeader>
 
-                <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-300 font-mono bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-800">
-                    {quiz.questions?.length || 0} Questions
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => onEditQuiz(quiz)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-xs font-bold text-slate-300 hover:text-white transition cursor-pointer"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" /> Edit
-                    </button>
-                    <button
-                      onClick={() => handleSelectQuiz(quiz)}
-                      className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-extrabold shadow-md shadow-indigo-600/30 transition transform hover:scale-105 cursor-pointer"
-                    >
-                      <Play className="w-3.5 h-3.5 fill-white" /> Host
-                    </button>
-                  </div>
-                </div>
-              </div>
+                <CardFooter className="p-5 pt-3 border-t border-zinc-800/60 flex items-center justify-between gap-2 bg-zinc-950/20">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEditQuiz(quiz)}
+                    className="h-8 text-xs text-zinc-400 hover:text-zinc-100"
+                  >
+                    <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    onClick={() => handleSelectQuiz(quiz)}
+                    className="h-8 text-xs bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-semibold"
+                  >
+                    <Play className="w-3 h-3 fill-zinc-950 mr-1" /> Launch
+                  </Button>
+                </CardFooter>
+              </Card>
             ))}
           </div>
         </div>
       ) : (
-        <div className="text-center py-20 px-6 border border-dashed border-slate-800/80 rounded-3xl bg-slate-900/40 backdrop-blur-sm mb-8 animate-fade-in-up">
-          <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mx-auto mb-4 animate-float shadow-lg shadow-indigo-500/5">
-            <BookOpen className="w-8 h-8" />
+        /* Clean Shadcn Empty State with subtle geometric vector graphic */
+        <Card className="border-dashed border-zinc-800 bg-zinc-950/40 p-12 text-center my-6">
+          <div className="w-12 h-12 rounded-xl border border-zinc-800 bg-zinc-900 flex items-center justify-center text-zinc-400 mx-auto mb-4">
+            <BookOpen className="w-6 h-6" />
           </div>
-          <h3 className="text-2xl font-black text-white mb-2">No Saved Quizzes Yet</h3>
-          <p className="text-sm text-slate-400 max-w-md mx-auto mb-6 leading-relaxed">
-            Create your custom quiz or generate questions instantly using Gemini AI. Once saved, your quizzes will appear here ready to launch anytime.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <button
-              onClick={() => setShowAIModal(true)}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-400 hover:to-pink-400 text-white font-bold text-sm transition transform hover:scale-105 shadow-md shadow-orange-500/20 cursor-pointer"
-            >
-              <Wand2 className="w-4 h-4" /> Generate with AI
-            </button>
-            <button
+          <CardTitle className="text-lg font-semibold text-zinc-200 mb-1">
+            No Quizzes in Library
+          </CardTitle>
+          <CardDescription className="text-sm text-zinc-400 max-w-sm mx-auto mb-6">
+            Get started by creating your custom questions or generate a set in seconds with Gemini AI.
+          </CardDescription>
+          <div className="flex items-center justify-center gap-2.5">
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleCustomQuiz}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 transition cursor-pointer"
+              className="border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-200"
             >
-              <PlusCircle className="w-4 h-4 text-indigo-400" /> Create Custom Quiz
-            </button>
+              <PlusCircle className="w-4 h-4 mr-1.5" />
+              Manual Builder
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setShowAIModal(true)}
+              className="bg-zinc-100 text-zinc-950 hover:bg-zinc-200 font-medium"
+            >
+              <Sparkles className="w-4 h-4 mr-1.5" />
+              AI Generator
+            </Button>
           </div>
-        </div>
+        </Card>
       )}
 
       <AIGeneratorModal
@@ -243,3 +249,5 @@ export function HostDashboard({ onStartRoom, onEditQuiz }) {
     </div>
   );
 }
+
+export default HostDashboard;

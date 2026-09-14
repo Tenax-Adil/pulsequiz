@@ -9,11 +9,11 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
-  Award,
-  Flame,
   Check
 } from 'lucide-react';
 import { deleteGameHistory } from '../../services/firebase.js';
+import { Button } from '../ui/button.jsx';
+import { Badge } from '../ui/badge.jsx';
 
 export function QuizHistoryModal({ isOpen, onClose, historyList = [], onRefresh }) {
   const [expandedId, setExpandedId] = useState(null);
@@ -44,42 +44,42 @@ export function QuizHistoryModal({ isOpen, onClose, historyList = [], onRefresh 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in overflow-y-auto">
-      <div className="relative w-full max-w-4xl bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-8 shadow-2xl my-6 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
+      <div className="relative w-full max-w-3xl bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-7 shadow-2xl my-6 flex flex-col max-h-[85vh]">
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+          className="absolute top-4 right-4 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition cursor-pointer"
         >
-          <X className="w-6 h-6" />
+          <X className="w-5 h-5" />
         </button>
 
         {/* Modal Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-            <History className="w-6 h-6" />
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center text-zinc-300">
+            <History className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-              Quiz History &amp; Results Log
+            <h3 className="text-lg font-bold text-white tracking-tight">
+              Session History
             </h3>
-            <p className="text-xs text-slate-400">
-              Review completed game sessions, player standings, and download event reports
+            <p className="text-xs text-zinc-400">
+              Completed tournaments and participant scorecards
             </p>
           </div>
         </div>
 
         {/* History Records List */}
-        <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+        <div className="flex-1 overflow-y-auto space-y-3 pr-1">
           {historyList.length === 0 ? (
-            <div className="py-16 text-center">
-              <div className="w-16 h-16 rounded-full bg-slate-800/80 border border-slate-700 flex items-center justify-center text-slate-500 mx-auto mb-3">
-                <History className="w-8 h-8" />
+            <div className="py-14 text-center">
+              <div className="w-12 h-12 rounded-xl bg-zinc-800/80 border border-zinc-700/60 flex items-center justify-center text-zinc-500 mx-auto mb-3">
+                <History className="w-6 h-6" />
               </div>
-              <h4 className="text-base font-bold text-slate-300">
-                No completed quizzes yet
+              <h4 className="text-sm font-semibold text-zinc-300">
+                No past sessions recorded
               </h4>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-                Completed quiz sessions and final player leaderboards will automatically be archived here.
+              <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1">
+                Completed quiz tournaments will automatically be logged here with exportable results.
               </p>
             </div>
           ) : (
@@ -94,27 +94,27 @@ export function QuizHistoryModal({ isOpen, onClose, historyList = [], onRefresh 
               return (
                 <div
                   key={record.id}
-                  className="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition"
+                  className="bg-zinc-950/70 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition"
                 >
                   <div
                     onClick={() => setExpandedId(isExpanded ? null : record.id)}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer"
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 cursor-pointer"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-base sm:text-lg font-black text-white truncate">
+                        <span className="text-sm font-semibold text-zinc-100 truncate">
                           {record.title || 'Untitled Quiz'}
                         </span>
-                        <span className="px-2 py-0.5 bg-slate-800 text-indigo-400 font-mono text-[11px] font-bold rounded-md">
-                          PIN: {record.roomCode}
-                        </span>
+                        <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0 border-zinc-800 text-zinc-400">
+                          PIN {record.roomCode}
+                        </Badge>
                       </div>
-                      <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5 text-slate-500" /> {dateStr}
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400">
+                        <span className="flex items-center gap-1 font-mono">
+                          <Calendar className="w-3 h-3 text-zinc-400" /> {dateStr}
                         </span>
                         <span className="flex items-center gap-1">
-                          <Users className="w-3.5 h-3.5 text-pink-400" /> {record.totalPlayers || 0} Players
+                          <Users className="w-3 h-3 text-zinc-400" /> {record.totalPlayers || 0} Players
                         </span>
                         <span>
                           {record.totalQuestions || 0} Questions
@@ -122,17 +122,20 @@ export function QuizHistoryModal({ isOpen, onClose, historyList = [], onRefresh 
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 self-end sm:self-center">
+                    <div className="flex items-center gap-2 self-end sm:self-center">
                       {top1 && (
-                        <div className="flex items-center gap-2 bg-amber-950/40 border border-amber-500/30 px-3 py-1.5 rounded-xl text-amber-300 text-xs font-bold">
-                          <span>{top1.avatar || '🏆'}</span>
-                          <span>Winner: {top1.nickname} ({top1.score} pts)</span>
-                        </div>
+                        <Badge variant="secondary" className="gap-1 bg-zinc-800 text-zinc-300 border-zinc-700 text-xs">
+                          <span>🏆</span>
+                          <span className="font-semibold">{top1.nickname}</span>
+                          <span className="text-zinc-400 font-mono">({top1.score})</span>
+                        </Badge>
                       )}
 
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={(e) => handleDownloadReport(record, e)}
-                        className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                        className="h-8 w-8 text-zinc-400 hover:text-white"
                         title="Download JSON Report"
                       >
                         {downloadedId === record.id ? (
@@ -140,55 +143,52 @@ export function QuizHistoryModal({ isOpen, onClose, historyList = [], onRefresh 
                         ) : (
                           <Download className="w-4 h-4" />
                         )}
-                      </button>
+                      </Button>
 
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={(e) => handleDelete(record.id, e)}
-                        className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition cursor-pointer"
+                        className="h-8 w-8 text-zinc-400 hover:text-red-400"
                         title="Delete record"
                       >
                         <Trash2 className="w-4 h-4" />
-                      </button>
+                      </Button>
 
-                      <button className="p-1 text-slate-400 hover:text-white">
-                        {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                      </button>
+                      <div className="p-1 text-zinc-500">
+                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </div>
                     </div>
                   </div>
 
                   {/* Expanded Full Leaderboard Table */}
                   {isExpanded && record.leaderboard && record.leaderboard.length > 0 && (
-                    <div className="mt-5 pt-4 border-t border-slate-800/80 animate-fade-in">
-                      <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
-                        <span>Final Player Standings</span>
-                        <span className="text-[11px] text-slate-500">
+                    <div className="mt-4 pt-3 border-t border-zinc-800/80 animate-fade-in-up">
+                      <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 mb-2 flex items-center justify-between">
+                        <span>Final Leaderboard</span>
+                        <span className="font-mono text-zinc-500">
                           {record.leaderboard.length} Participants
                         </span>
                       </div>
 
-                      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
                         {record.leaderboard.map((player, pIdx) => (
                           <div
                             key={player.id || pIdx}
-                            className={`flex items-center justify-between p-3 rounded-xl border text-xs ${
+                            className={`flex items-center justify-between px-3 py-2 rounded-lg border text-xs ${
                               pIdx === 0
-                                ? 'bg-amber-950/20 border-amber-500/40 font-bold text-amber-200'
-                                : 'bg-slate-900/60 border-slate-800 text-slate-300'
+                                ? 'bg-zinc-800/90 border-zinc-700 text-zinc-100 font-semibold'
+                                : 'bg-zinc-900/60 border-zinc-800 text-zinc-300'
                             }`}
                           >
-                            <div className="flex items-center gap-3">
-                              <span className="w-5 text-center font-mono font-bold text-slate-500">
+                            <div className="flex items-center gap-2.5">
+                              <span className="w-4 text-center font-mono text-zinc-500 font-semibold">
                                 #{pIdx + 1}
                               </span>
-                              <span className="text-base">{player.avatar || '⚡'}</span>
-                              <span className="font-bold">{player.nickname}</span>
-                              {player.streak > 1 && (
-                                <span className="text-[10px] text-orange-400 flex items-center gap-0.5">
-                                  <Flame className="w-3 h-3 fill-orange-400" /> {player.streak}
-                                </span>
-                              )}
+                              <span>{player.avatar || '⚡'}</span>
+                              <span>{player.nickname}</span>
                             </div>
-                            <span className="font-mono font-bold text-white">
+                            <span className="font-mono font-semibold text-zinc-200">
                               {player.score || 0} pts
                             </span>
                           </div>
@@ -202,15 +202,19 @@ export function QuizHistoryModal({ isOpen, onClose, historyList = [], onRefresh 
           )}
         </div>
 
-        <div className="pt-4 border-t border-slate-800 flex justify-end mt-4">
-          <button
+        <div className="pt-4 border-t border-zinc-800/80 flex justify-end mt-4">
+          <Button
+            variant="outline"
+            size="sm"
             onClick={onClose}
-            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition cursor-pointer"
+            className="border-zinc-800 text-xs"
           >
             Close
-          </button>
+          </Button>
         </div>
       </div>
     </div>
   );
 }
+
+export default QuizHistoryModal;

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Zap, Volume2, VolumeX, Settings, Users, MonitorPlay, Lock, LogOut } from 'lucide-react';
+import { Zap, Volume2, VolumeX, Settings, MonitorPlay, Lock, LogOut } from 'lucide-react';
 import { soundFx } from '../../services/audio.js';
 import { isFirebaseLive } from '../../services/firebase.js';
 import { ConfigModal } from './ConfigModal.jsx';
+import { Button } from '../ui/button.jsx';
+import { Badge } from '../ui/badge.jsx';
 
 export function Navbar({
   currentView,
@@ -23,99 +25,107 @@ export function Navbar({
 
   return (
     <>
-      <header className="w-full bg-slate-950/80 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-40">
+      <header className="w-full bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800/80 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          {/* Brand Logo */}
+          {/* Brand Logo - Clean Shadcn Style (No Neon) */}
           <div
             onClick={() => onViewChange('home')}
-            className="flex items-center gap-3 cursor-pointer select-none group"
+            className="flex items-center gap-2.5 cursor-pointer select-none group"
           >
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 via-purple-600 to-indigo-500 p-0.5 shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition">
-              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                <Zap className="w-5 h-5 text-pink-400 fill-pink-400" />
-              </div>
+            <div className="w-8 h-8 rounded-lg bg-zinc-100 text-zinc-950 flex items-center justify-center shadow-sm group-hover:bg-zinc-200 transition">
+              <Zap className="w-4 h-4 fill-zinc-950 text-zinc-950" />
             </div>
             <div>
-              <span className="text-xl font-black tracking-tight text-white flex items-center gap-1 font-heading">
-                Pulse<span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-400 to-indigo-400">Quiz</span>
+              <span className="text-base font-bold tracking-tight text-white flex items-center gap-1">
+                PulseQuiz
               </span>
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 block -mt-1">
-                Real-Time Live
+              <span className="text-[10px] font-medium tracking-wide text-zinc-400 block -mt-1">
+                Live Interactive
               </span>
             </div>
           </div>
 
-          {/* Center Navigation: Only shown when Host is Authenticated */}
+          {/* Center Status: Only shown when Host is Authenticated */}
           {isHostAuthenticated ? (
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-950/80 border border-indigo-500/30 text-indigo-200 text-xs font-bold shadow-inner">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <MonitorPlay className="w-3.5 h-3.5 text-indigo-400" />
+              <Badge variant="secondary" className="gap-2 px-3 py-1 bg-zinc-900 border-zinc-800 text-zinc-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <MonitorPlay className="w-3.5 h-3.5 text-zinc-400" />
                 <span>Host Studio</span>
-              </div>
-              <button
+              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={onHostLogout}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-400 hover:text-rose-300 rounded-full bg-slate-900/90 border border-slate-800 hover:border-rose-900/50 hover:bg-rose-950/30 transition cursor-pointer"
+                className="h-7 text-xs text-zinc-400 hover:text-red-400 hover:bg-zinc-900"
                 title="Lock & Exit Host Studio"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-3.5 h-3.5 mr-1" />
                 <span className="hidden sm:inline">Exit Host</span>
-              </button>
+              </Button>
             </div>
           ) : (
-            <div className="hidden sm:block text-xs font-bold uppercase tracking-widest text-slate-500">
-              Live Classroom &amp; Event Quiz
+            <div className="hidden sm:flex items-center gap-2">
+              <Badge variant="outline" className="text-[11px] text-zinc-400 border-zinc-800 font-normal">
+                Live Multiplayer Quiz Platform
+              </Badge>
             </div>
           )}
 
           {/* Right Action Icons */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2">
             {/* Host-Only Controls: Realtime Status & Settings Gear */}
             {isHostAuthenticated && (
               <>
                 <button
                   onClick={() => setShowConfig(true)}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-900 border border-slate-800 hover:border-slate-700 transition cursor-pointer"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-zinc-900/90 border border-zinc-800 hover:border-zinc-700 text-zinc-300 transition cursor-pointer"
                   title="Host: Configure Real-Time Backend & AI Keys"
                 >
-                  <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-emerald-400 animate-ping' : 'bg-indigo-400 animate-pulse'}`} />
-                  <span className="text-slate-300 hidden sm:inline">
-                    {isLive ? 'Firebase Live' : 'Local RT Sync'}
+                  <span className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-emerald-400' : 'bg-blue-400'}`} />
+                  <span className="hidden sm:inline">
+                    {isLive ? 'Firebase Active' : 'Local Sync'}
                   </span>
                 </button>
 
-                <button
+                <Button
+                  variant="outline"
+                  size="icon"
                   onClick={() => setShowConfig(true)}
-                  className="p-2 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                  className="h-8 w-8 text-zinc-400 hover:text-zinc-100"
                   title="Host Settings (API Keys, Database, Passcode)"
                 >
-                  <Settings className="w-4 h-4 text-indigo-400" />
-                </button>
+                  <Settings className="w-4 h-4" />
+                </Button>
               </>
             )}
 
-            {/* Sound Mute Toggle (Available to all users) */}
-            <button
+            {/* Sound Mute Toggle */}
+            <Button
+              variant="outline"
+              size="icon"
               onClick={handleToggleSound}
-              className="p-2 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              className="h-8 w-8 text-zinc-400 hover:text-zinc-100"
               title={isMuted ? 'Unmute Sound Effects' : 'Mute Sound Effects'}
             >
               {isMuted ? (
-                <VolumeX className="w-4 h-4 text-rose-400" />
+                <VolumeX className="w-4 h-4 text-zinc-500" />
               ) : (
-                <Volume2 className="w-4 h-4 text-emerald-400" />
+                <Volume2 className="w-4 h-4 text-zinc-300" />
               )}
-            </button>
+            </Button>
 
-            {/* Host Passcode Login trigger (if not authenticated) */}
+            {/* Host Passcode Login trigger (discreet if not authenticated) */}
             {!isHostAuthenticated && (
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={onOpenHostAuth}
-                className="p-2 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 transition cursor-pointer"
-                title="Host Studio Login (Passcode Protected)"
+                className="h-8 w-8 text-zinc-500 hover:text-zinc-300"
+                title="Host Studio Login"
               >
                 <Lock className="w-4 h-4" />
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -128,3 +138,5 @@ export function Navbar({
     </>
   );
 }
+
+export default Navbar;

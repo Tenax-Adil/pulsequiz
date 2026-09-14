@@ -10,12 +10,15 @@ import {
   Sparkles,
   Play,
   Copy,
-  ExternalLink,
   Save,
   Check
 } from 'lucide-react';
 import { uploadQuestionImage } from '../../services/storage.js';
 import { OPTION_THEMES } from '../Common/AnswerButton.jsx';
+import { Button } from '../ui/button.jsx';
+import { Badge } from '../ui/badge.jsx';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card.jsx';
+import { Input } from '../ui/input.jsx';
 
 export function QuizEditor({ initialQuiz, onStartRoom, onSaveQuiz, onBack, onOpenAIGenerator }) {
   const [title, setTitle] = useState(initialQuiz?.title || 'My Interactive Live Quiz');
@@ -99,10 +102,10 @@ export function QuizEditor({ initialQuiz, onStartRoom, onSaveQuiz, onBack, onOpe
 
     setUploadingImage(true);
     try {
-      const res = await uploadQuestionImage(file);
-      updateCurrentQuestion({ imageUrl: res.url });
+      const url = await uploadQuestionImage(file);
+      updateCurrentQuestion({ imageUrl: url });
     } catch (err) {
-      alert(err.message || 'Failed to process image');
+      alert(err.message || 'Image upload failed.');
     } finally {
       setUploadingImage(false);
     }
@@ -140,7 +143,6 @@ export function QuizEditor({ initialQuiz, onStartRoom, onSaveQuiz, onBack, onOpe
   };
 
   const handleLaunch = () => {
-    // Validate
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
       if (!q.text.trim()) {
@@ -164,94 +166,101 @@ export function QuizEditor({ initialQuiz, onStartRoom, onSaveQuiz, onBack, onOpe
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      {/* Top Bar Navigation */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-800">
+    <div className="max-w-6xl mx-auto px-4 py-8 animate-fade-in-up">
+      {/* Top Bar Navigation - Clean Shadcn */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 pb-5 border-b border-zinc-800">
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            variant="outline"
+            size="icon"
             onClick={onBack}
-            className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            className="border-zinc-800 h-9 w-9 text-zinc-400 hover:text-white"
           >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
           <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
-              Quiz Creator Studio
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+              Quiz Builder
             </span>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter Quiz Title..."
-              className="text-2xl sm:text-3xl font-black text-white bg-transparent border-b border-transparent hover:border-slate-700 focus:border-indigo-500 focus:outline-none transition block"
+              className="text-xl sm:text-2xl font-bold text-white bg-transparent border-b border-transparent hover:border-zinc-700 focus:border-zinc-400 focus:outline-none transition block"
             />
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-          <button
-            type="button"
+        <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+          <Button
+            variant="outline"
             onClick={handleSave}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 transition cursor-pointer"
+            className="border-zinc-800 text-zinc-200 hover:bg-zinc-800"
           >
             {savedFeedback ? (
               <>
                 <Check className="w-4 h-4 text-emerald-400" />
-                <span className="text-emerald-300">Saved to Library!</span>
+                <span className="text-emerald-400">Saved</span>
               </>
             ) : (
               <>
-                <Save className="w-4 h-4 text-indigo-400" />
-                <span>Save Quiz</span>
+                <Save className="w-4 h-4 text-zinc-400" />
+                <span>Save</span>
               </>
             )}
-          </button>
+          </Button>
 
-          <button
+          <Button
+            variant="secondary"
             onClick={onOpenAIGenerator}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-pink-500 hover:from-amber-400 hover:to-pink-400 text-white font-bold text-sm shadow-md shadow-orange-500/20 transition cursor-pointer"
+            className="border border-zinc-700/60"
           >
-            <Sparkles className="w-4 h-4" /> AI Generate
-          </button>
+            <Sparkles className="w-4 h-4 text-zinc-300" />
+            <span>AI Assist</span>
+          </Button>
 
-          <button
+          <Button
             onClick={handleLaunch}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-500/25 transition cursor-pointer"
+            className="bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-bold shadow-sm"
           >
-            <Play className="w-4 h-4 fill-white" /> Launch Live Lobby
-          </button>
+            <Play className="w-4 h-4 fill-zinc-950 mr-1" />
+            <span>Launch Lobby</span>
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Sidebar: Question Timeline */}
         <div className="lg:col-span-3 space-y-3">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
               Questions ({questions.length}/50)
             </span>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleAddQuestion}
               disabled={questions.length >= 50}
-              className="flex items-center gap-1 text-xs font-bold text-indigo-400 hover:text-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+              className="h-7 text-xs text-zinc-300 hover:text-white"
             >
-              <Plus className="w-4 h-4" /> Add
-            </button>
+              <Plus className="w-3.5 h-3.5 mr-1" /> Add
+            </Button>
           </div>
 
-          <div className="space-y-2 max-h-[640px] overflow-y-auto pr-1">
+          <div className="space-y-1.5 max-h-[600px] overflow-y-auto pr-1">
             {questions.map((q, idx) => (
               <div
                 key={q.id || idx}
                 onClick={() => setActiveQuestionIdx(idx)}
-                className={`group relative p-3 rounded-2xl border transition cursor-pointer flex items-center justify-between ${
+                className={`group relative p-2.5 rounded-xl border transition cursor-pointer flex items-center justify-between ${
                   activeQuestionIdx === idx
-                    ? 'bg-indigo-950/60 border-indigo-500 text-white shadow-lg shadow-indigo-900/20'
-                    : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800/80 hover:text-white'
+                    ? 'bg-zinc-800 border-zinc-600 text-white shadow-sm'
+                    : 'bg-zinc-900/60 border-zinc-800/80 text-zinc-400 hover:bg-zinc-850 hover:text-zinc-200'
                 }`}
               >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[11px] font-bold shrink-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-5 h-5 rounded-md bg-zinc-950/80 flex items-center justify-center text-[10px] font-mono font-bold shrink-0 text-zinc-400">
                     {idx + 1}
                   </span>
                   <span className="text-xs font-medium truncate max-w-[130px]">
@@ -259,7 +268,7 @@ export function QuizEditor({ initialQuiz, onStartRoom, onSaveQuiz, onBack, onOpe
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition">
                   {questions.length < 50 && (
                     <button
                       type="button"
@@ -267,10 +276,10 @@ export function QuizEditor({ initialQuiz, onStartRoom, onSaveQuiz, onBack, onOpe
                         e.stopPropagation();
                         handleDuplicateQuestion(idx);
                       }}
-                      className="p-1 rounded-lg hover:text-indigo-400 transition"
-                      title="Duplicate Question"
+                      className="p-1 rounded text-zinc-400 hover:text-zinc-100 transition"
+                      title="Duplicate"
                     >
-                      <Copy className="w-3.5 h-3.5" />
+                      <Copy className="w-3 h-3" />
                     </button>
                   )}
 
@@ -281,58 +290,44 @@ export function QuizEditor({ initialQuiz, onStartRoom, onSaveQuiz, onBack, onOpe
                         e.stopPropagation();
                         handleDeleteQuestion(idx);
                       }}
-                      className="p-1 rounded-lg hover:text-rose-400 transition"
-                      title="Delete Question"
+                      className="p-1 rounded text-zinc-400 hover:text-red-400 transition"
+                      title="Delete"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-3 h-3" />
                     </button>
                   )}
                 </div>
               </div>
             ))}
-
-            {questions.length < 50 ? (
-              <button
-                type="button"
-                onClick={handleAddQuestion}
-                className="w-full py-3 rounded-2xl border-2 border-dashed border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white flex items-center justify-center gap-2 text-xs font-bold transition cursor-pointer"
-              >
-                <Plus className="w-4 h-4" /> Add Question ({questions.length}/50)
-              </button>
-            ) : (
-              <div className="w-full py-2.5 rounded-2xl bg-slate-950/80 border border-slate-800 text-slate-500 text-center text-xs font-semibold">
-                Maximum 50 Questions Limit Reached
-              </div>
-            )}
           </div>
         </div>
 
         {/* Right Main Editor Canvas */}
-        <div className="lg:col-span-9 space-y-6">
+        <div className="lg:col-span-9 space-y-5">
           {/* Question Text & Time Limit Header */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-              <span className="text-xs font-black uppercase tracking-widest text-indigo-400">
-                Question {activeQuestionIdx + 1} of {questions.length}
+          <Card className="border-zinc-800 bg-zinc-900/80 p-5">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
+              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                Question #{activeQuestionIdx + 1}
               </span>
 
               {/* Timer Limit Controller */}
-              <div className="flex items-center gap-3 bg-slate-950 px-4 py-2 rounded-2xl border border-slate-800">
-                <Clock className="w-4 h-4 text-amber-400" />
-                <span className="text-xs font-bold text-slate-300">Time Limit:</span>
+              <div className="flex items-center gap-2 bg-zinc-950 px-3 py-1.5 rounded-lg border border-zinc-800">
+                <Clock className="w-3.5 h-3.5 text-zinc-400" />
+                <span className="text-xs text-zinc-400 font-medium">Timer:</span>
                 <select
                   value={currentQ.timeLimit}
                   onChange={(e) =>
                     updateCurrentQuestion({ timeLimit: parseInt(e.target.value, 10) })
                   }
-                  className="bg-transparent text-sm font-black text-amber-400 focus:outline-none cursor-pointer"
+                  className="bg-transparent text-xs font-mono font-semibold text-zinc-200 focus:outline-none cursor-pointer"
                 >
-                  <option value={10}>10 Seconds</option>
-                  <option value={15}>15 Seconds</option>
-                  <option value={20}>20 Seconds</option>
-                  <option value={30}>30 Seconds</option>
-                  <option value={45}>45 Seconds</option>
-                  <option value={60}>60 Seconds</option>
+                  <option value={10}>10s</option>
+                  <option value={15}>15s</option>
+                  <option value={20}>20s</option>
+                  <option value={30}>30s</option>
+                  <option value={45}>45s</option>
+                  <option value={60}>60s</option>
                 </select>
               </div>
             </div>
@@ -341,36 +336,36 @@ export function QuizEditor({ initialQuiz, onStartRoom, onSaveQuiz, onBack, onOpe
               rows={2}
               value={currentQ.text}
               onChange={(e) => updateCurrentQuestion({ text: e.target.value })}
-              placeholder="Type your question here (e.g. Which planet is closest to the Sun?)..."
-              className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-2xl p-4 text-lg sm:text-xl font-bold text-white placeholder-slate-600 focus:outline-none transition resize-none"
+              placeholder="Type your question here..."
+              className="w-full bg-zinc-950 border border-zinc-800 focus:border-zinc-500 rounded-xl p-3.5 text-base font-medium text-white placeholder-zinc-500 focus:outline-none transition resize-none"
             />
-          </div>
+          </Card>
 
-          {/* Media Attachment: Drag-and-drop or URL */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+          {/* Media Attachment */}
+          <Card className="border-zinc-800 bg-zinc-900/80 p-5">
             <div className="flex items-center justify-between mb-3">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                <ImageIcon className="w-4 h-4 text-sky-400" /> Question Image Attachment (Optional)
+              <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                <ImageIcon className="w-3.5 h-3.5 text-zinc-400" /> Image Attachment (Optional)
               </label>
               {currentQ.imageUrl && (
                 <button
                   onClick={() => updateCurrentQuestion({ imageUrl: '' })}
-                  className="text-xs text-rose-400 hover:text-rose-300 underline cursor-pointer"
+                  className="text-xs text-red-400 hover:underline cursor-pointer"
                 >
-                  Remove Image
+                  Remove
                 </button>
               )}
             </div>
 
             {currentQ.imageUrl ? (
-              <div className="relative rounded-2xl overflow-hidden max-h-56 bg-black border border-slate-800 group">
+              <div className="relative rounded-xl overflow-hidden max-h-52 bg-black border border-zinc-800 group">
                 <img
                   src={currentQ.imageUrl}
                   alt="Question Attachment"
-                  className="w-full h-56 object-cover"
+                  className="w-full h-52 object-cover"
                 />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-3">
-                  <label className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold cursor-pointer transition">
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
+                  <label className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-xs font-medium cursor-pointer transition">
                     Change Image
                     <input
                       type="file"
@@ -381,20 +376,18 @@ export function QuizEditor({ initialQuiz, onStartRoom, onSaveQuiz, onBack, onOpe
                   </label>
                   <button
                     onClick={() => updateCurrentQuestion({ imageUrl: '' })}
-                    className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold cursor-pointer transition"
+                    className="px-3 py-1.5 bg-red-900/80 hover:bg-red-800 text-white rounded-lg text-xs font-medium cursor-pointer transition"
                   >
                     Delete
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="border-2 border-dashed border-slate-800 hover:border-slate-700 rounded-2xl p-6 text-center transition">
+              <div className="border border-dashed border-zinc-800 hover:border-zinc-700 rounded-xl p-5 text-center transition">
                 <div className="flex flex-col items-center justify-center">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-slate-400 mb-3">
-                    <Upload className="w-6 h-6" />
-                  </div>
-                  <label className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl cursor-pointer transition mb-2">
-                    {uploadingImage ? 'Processing...' : 'Upload Image File'}
+                  <Upload className="w-5 h-5 text-zinc-500 mb-2" />
+                  <label className="px-3.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium rounded-lg cursor-pointer transition mb-1.5">
+                    {uploadingImage ? 'Processing...' : 'Upload Image'}
                     <input
                       type="file"
                       accept="image/*"
@@ -403,37 +396,36 @@ export function QuizEditor({ initialQuiz, onStartRoom, onSaveQuiz, onBack, onOpe
                       disabled={uploadingImage}
                     />
                   </label>
-                  <span className="text-[11px] text-slate-500">
-                    Supports JPG, PNG, WebP with Cloudinary, S3, or local compression
+                  <span className="text-[11px] text-zinc-500">
+                    JPG, PNG, or WebP
                   </span>
 
-                  {/* Or image URL input */}
-                  <div className="mt-4 w-full max-w-md">
-                    <input
+                  <div className="mt-3 w-full max-w-sm">
+                    <Input
                       type="text"
-                      placeholder="Or paste an image URL directly..."
+                      placeholder="Or paste an image URL..."
                       value={currentQ.imageUrl}
                       onChange={(e) => updateCurrentQuestion({ imageUrl: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+                      className="h-8 text-xs bg-zinc-950"
                     />
                   </div>
                 </div>
               </div>
             )}
-          </div>
+          </Card>
 
-          {/* 4 Kahoot Options & Correct Answer Toggle */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+          {/* Answer Options & Correct Selector */}
+          <Card className="border-zinc-800 bg-zinc-900/80 p-5">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Answer Options & Correct Answer Selector
+              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                Answer Options
               </span>
-              <span className="text-[11px] text-slate-400">
-                Click the checkmark on the correct answer
+              <span className="text-[11px] text-zinc-500">
+                Click mark on the correct answer
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               {OPTION_THEMES.map((theme, optIdx) => {
                 const isSelectedCorrect = currentQ.correctOptionIndex === optIdx;
                 const Icon = theme.icon;
@@ -441,34 +433,33 @@ export function QuizEditor({ initialQuiz, onStartRoom, onSaveQuiz, onBack, onOpe
                 return (
                   <div
                     key={optIdx}
-                    className={`relative rounded-2xl p-4 border-2 transition ${
+                    className={`relative rounded-xl p-3.5 border transition ${
                       isSelectedCorrect
-                        ? 'border-emerald-400 bg-emerald-950/20'
-                        : 'border-slate-800 bg-slate-950/70'
+                        ? 'border-emerald-500/60 bg-emerald-950/20'
+                        : 'border-zinc-800 bg-zinc-950/60'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <div className={`w-7 h-7 rounded-lg ${theme.bg} flex items-center justify-center`}>
-                          <Icon className="w-4 h-4 fill-white text-white" />
+                        <div className={`w-6 h-6 rounded-md ${theme.bg} flex items-center justify-center`}>
+                          <Icon className="w-3.5 h-3.5 fill-white text-white" />
                         </div>
-                        <span className="text-xs font-bold text-slate-400">
-                          {theme.label} ({theme.shape})
+                        <span className="text-xs font-medium text-zinc-400">
+                          {theme.label}
                         </span>
                       </div>
 
-                      {/* Correct answer toggle badge */}
                       <button
                         type="button"
                         onClick={() => updateCurrentQuestion({ correctOptionIndex: optIdx })}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
+                        className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold transition cursor-pointer ${
                           isSelectedCorrect
-                            ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
-                            : 'bg-slate-800 text-slate-500 hover:text-slate-300'
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'
                         }`}
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>{isSelectedCorrect ? 'Correct' : 'Mark Correct'}</span>
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>{isSelectedCorrect ? 'Correct' : 'Mark'}</span>
                       </button>
                     </div>
 
@@ -480,16 +471,18 @@ export function QuizEditor({ initialQuiz, onStartRoom, onSaveQuiz, onBack, onOpe
                         newOpts[optIdx] = e.target.value;
                         updateCurrentQuestion({ options: newOpts });
                       }}
-                      placeholder={`Choice ${optIdx + 1}...`}
-                      className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-base font-bold text-white placeholder-slate-600 focus:outline-none transition"
+                      placeholder={`Option ${optIdx + 1}...`}
+                      className="w-full bg-zinc-900/80 border border-zinc-800 focus:border-zinc-500 rounded-lg px-3 py-2 text-sm font-medium text-white placeholder-zinc-600 focus:outline-none transition"
                     />
                   </div>
                 );
               })}
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>
   );
 }
+
+export default QuizEditor;

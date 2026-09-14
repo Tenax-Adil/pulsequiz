@@ -4,23 +4,21 @@ import {
   XCircle,
   Clock,
   Flame,
-  Trophy,
-  Award,
-  Zap
+  Trophy
 } from 'lucide-react';
 import { soundFx } from '../../services/audio.js';
+import { Card } from '../ui/card.jsx';
+import { Badge } from '../ui/badge.jsx';
 
 export function StudentScoreView({ room, player }) {
   const currentIdx = room.currentQuestionIndex || 0;
   const currentQ = room.questions?.[currentIdx];
 
-  // Retrieve player's submission for current question
   const response = room.responses?.[currentQ?.id]?.[player?.id];
   const isCorrect = response ? response.selectedOption === currentQ?.correctOptionIndex : false;
   const pointsAwarded = response?.pointsAwarded || 0;
   const timeSpentMs = response?.timeSpentMs || 0;
 
-  // Calculate student's overall rank
   const allPlayers = room.players ? Object.entries(room.players) : [];
   const sorted = allPlayers
     .map(([id, d]) => ({ id, ...d }))
@@ -45,80 +43,79 @@ export function StudentScoreView({ room, player }) {
   }, [response, isCorrect]);
 
   return (
-    <div className="max-w-md w-full mx-auto px-4 py-8 flex flex-col justify-between min-h-[calc(100vh-6rem)]">
-      {/* Top Banner: Round Result Banner */}
-      <div className="my-auto text-center space-y-6">
-        {/* Big Animated Icon */}
+    <div className="max-w-md w-full mx-auto px-4 py-8 flex flex-col justify-between min-h-[calc(100vh-6rem)] animate-fade-in-up">
+      <div className="my-auto text-center space-y-5">
+        {/* Clean Status Icon */}
         <div className="relative inline-block">
           {isCorrect ? (
-            <div className="w-28 h-28 rounded-3xl bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-emerald-400 mx-auto shadow-2xl shadow-emerald-500/30">
-              <CheckCircle2 className="w-16 h-16" />
+            <div className="w-20 h-20 rounded-2xl bg-emerald-950/60 border border-emerald-500/50 flex items-center justify-center text-emerald-400 mx-auto shadow-sm">
+              <CheckCircle2 className="w-10 h-10" />
             </div>
           ) : (
-            <div className="w-28 h-28 rounded-3xl bg-rose-500/20 border-2 border-rose-500 flex items-center justify-center text-rose-400 mx-auto shadow-2xl shadow-rose-500/30">
-              <XCircle className="w-16 h-16" />
+            <div className="w-20 h-20 rounded-2xl bg-rose-950/60 border border-rose-500/50 flex items-center justify-center text-rose-400 mx-auto shadow-sm">
+              <XCircle className="w-10 h-10" />
             </div>
           )}
         </div>
 
         <div>
-          <h2 className={`text-3xl sm:text-4xl font-black tracking-tight ${isCorrect ? 'text-emerald-400' : 'text-rose-400'}`}>
+          <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight ${isCorrect ? 'text-emerald-400' : 'text-rose-400'}`}>
             {isCorrect ? 'Correct!' : response ? 'Incorrect' : 'Time Expired'}
           </h2>
 
-          <div className="text-4xl font-black font-mono mt-2 text-white">
-            +{pointsAwarded} <span className="text-base text-slate-400 font-sans">pts</span>
+          <div className="text-3xl font-bold font-mono mt-1 text-white">
+            +{pointsAwarded} <span className="text-sm text-zinc-400 font-sans font-normal">pts</span>
           </div>
 
           {isCorrect && timeSpentMs > 0 && (
-            <div className="text-xs text-slate-400 mt-1 flex items-center justify-center gap-1">
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
-              <span>Answered in {(timeSpentMs / 1000).toFixed(2)}s</span>
+            <div className="text-xs text-zinc-400 mt-1 flex items-center justify-center gap-1 font-mono">
+              <Clock className="w-3 h-3 text-zinc-500" />
+              <span>{(timeSpentMs / 1000).toFixed(2)}s elapsed</span>
             </div>
           )}
         </div>
 
-        {/* Streak Flame Banner */}
+        {/* Streak Indicator */}
         {streak > 1 && (
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500/20 to-amber-500/20 border border-orange-500/40 px-5 py-2 rounded-full text-orange-400 font-black text-sm shadow-lg shadow-orange-500/10 animate-bounce">
-            <Flame className="w-5 h-5 fill-orange-400 text-orange-400" />
-            <span>Answer Streak: {streak} in a row!</span>
-          </div>
+          <Badge variant="secondary" className="gap-1.5 px-3 py-1 bg-zinc-900 border-zinc-800 text-amber-400 text-xs font-semibold">
+            <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+            <span>Streak: {streak} in a row</span>
+          </Badge>
         )}
 
         {/* Stats Grid: Rank & Total Score */}
-        <div className="grid grid-cols-2 gap-4 max-w-xs mx-auto pt-4">
-          <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-              Your Rank
+        <div className="grid grid-cols-2 gap-3 max-w-xs mx-auto pt-2">
+          <Card className="border-zinc-800 bg-zinc-900/80 p-3.5 text-center">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 block mb-0.5">
+              Rank
             </span>
-            <div className="text-2xl font-black text-indigo-400 font-mono">
+            <div className="text-xl font-bold text-white font-mono">
               #{currentRank}
             </div>
-            <span className="text-[10px] text-slate-500">
+            <span className="text-[10px] text-zinc-500">
               of {totalPlayers} players
             </span>
-          </div>
+          </Card>
 
-          <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+          <Card className="border-zinc-800 bg-zinc-900/80 p-3.5 text-center">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 block mb-0.5">
               Total Score
             </span>
-            <div className="text-2xl font-black text-white font-mono">
+            <div className="text-xl font-bold text-white font-mono">
               {totalScore}
             </div>
-            <span className="text-[10px] text-slate-500">
-              points
+            <span className="text-[10px] text-zinc-500">
+              points accumulated
             </span>
-          </div>
+          </Card>
         </div>
       </div>
 
-      <div className="text-center py-4">
-        <span className="text-xs text-slate-400">
-          Get ready for the next round on the host screen...
-        </span>
+      <div className="text-center text-xs text-zinc-500 pt-4">
+        Waiting for next question...
       </div>
     </div>
   );
 }
+
+export default StudentScoreView;

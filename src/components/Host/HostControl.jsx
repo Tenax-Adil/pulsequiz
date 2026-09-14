@@ -2,16 +2,16 @@ import React, { useState, useEffect } from 'react';
 import {
   Users,
   Clock,
-  CheckCircle2,
   ChevronRight,
   Trophy,
-  BarChart3,
-  Flame,
-  AlertCircle
+  BarChart3
 } from 'lucide-react';
 import { AnswerButton, OPTION_THEMES } from '../Common/AnswerButton.jsx';
 import { useQuizTimer } from '../../hooks/useQuizTimer.js';
 import { soundFx } from '../../services/audio.js';
+import { Button } from '../ui/button.jsx';
+import { Badge } from '../ui/badge.jsx';
+import { Card } from '../ui/card.jsx';
 
 export function HostControl({
   room,
@@ -34,12 +34,11 @@ export function HostControl({
   const [isRevealed, setIsRevealed] = useState(room.isQuestionRevealed || false);
 
   // Synchronized countdown timer
-  const { timeLeft, progressPercent, isExpired } = useQuizTimer({
+  const { timeLeft, progressPercent } = useQuizTimer({
     timeLimit: currentQ?.timeLimit || 20,
     startedAt: room.questionStartedAt || Date.now(),
     isActive: !isRevealed,
     onTimeUp: () => {
-      // Time is up, reveal answers
       setIsRevealed(true);
       onRevealAnswers();
     },
@@ -68,94 +67,87 @@ export function HostControl({
     onRevealAnswers();
   };
 
-  const isLastQuestion = currentIdx >= totalQuestions - 1;
-
   if (!currentQ) {
     return (
-      <div className="p-8 text-center text-white">
+      <div className="p-8 text-center text-zinc-400">
         Question data missing.
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col min-h-[calc(100vh-5rem)] justify-between">
-      {/* Top Header: Question Index, Countdown Clock, Response Counter */}
-      <div className="flex items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 p-4 rounded-3xl backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <div className="px-4 py-2 bg-indigo-950 border border-indigo-500/40 text-indigo-300 rounded-2xl text-sm font-black font-mono">
+    <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col min-h-[calc(100vh-5rem)] justify-between animate-fade-in-up">
+      {/* Top Header */}
+      <Card className="border-zinc-800 bg-zinc-900/80 p-3.5 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5">
+          <Badge variant="secondary" className="font-mono text-xs px-2.5 py-1 bg-zinc-800 text-zinc-200 border-zinc-700">
             {currentIdx + 1} / {totalQuestions}
-          </div>
-          <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-300 hidden sm:inline">
+          </Badge>
+          <span className="text-xs font-semibold text-zinc-300 truncate max-w-xs hidden sm:inline">
             {room.title}
           </span>
         </div>
 
-        {/* Circular / Digital Countdown Timer */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-slate-950 px-5 py-2 rounded-2xl border border-slate-800 shadow-inner">
-            <Clock className={`w-5 h-5 ${timeLeft <= 5 ? 'text-rose-500 animate-bounce' : 'text-amber-400'}`} />
-            <span className={`text-2xl font-black font-mono tracking-tight ${timeLeft <= 5 ? 'text-rose-400' : 'text-white'}`}>
-              {isRevealed ? 'TIME UP' : `${timeLeft}s`}
+        {/* Timer & Response Counters */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 bg-zinc-950 px-3 py-1.5 rounded-lg border border-zinc-800">
+            <Clock className={`w-4 h-4 ${timeLeft <= 5 ? 'text-red-400' : 'text-zinc-400'}`} />
+            <span className={`text-sm font-mono font-bold ${timeLeft <= 5 ? 'text-red-400' : 'text-zinc-100'}`}>
+              {isRevealed ? 'Revealed' : `${timeLeft}s`}
             </span>
           </div>
 
-          {/* Response Tracker Pill */}
-          <div className="flex items-center gap-2 bg-slate-950 px-5 py-2 rounded-2xl border border-slate-800 shadow-inner">
-            <Users className="w-5 h-5 text-emerald-400" />
-            <span className="text-2xl font-black text-white font-mono">
-              {responseCount}
-            </span>
-            <span className="text-xs text-slate-400 uppercase tracking-wider font-bold">
-              / {totalPlayers}
+          <div className="flex items-center gap-1.5 bg-zinc-950 px-3 py-1.5 rounded-lg border border-zinc-800">
+            <Users className="w-4 h-4 text-zinc-400" />
+            <span className="text-sm font-mono font-bold text-zinc-100">
+              {responseCount}/{totalPlayers}
             </span>
           </div>
-        </div>
 
-        {/* Action Button: Reveal or Leaderboard */}
-        <div>
+          {/* Action Button */}
           {!isRevealed ? (
-            <button
+            <Button
+              size="sm"
+              variant="outline"
               onClick={handleManualReveal}
-              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs sm:text-sm shadow-md shadow-amber-500/20 transition cursor-pointer"
+              className="border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-100"
             >
               Skip / Reveal
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
+              size="sm"
               onClick={onShowLeaderboard}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs sm:text-sm shadow-lg shadow-purple-600/30 transition cursor-pointer"
+              className="bg-zinc-100 hover:bg-zinc-200 text-zinc-950 text-xs font-bold shadow-sm"
             >
-              <Trophy className="w-4 h-4 text-amber-300" />
-              <span>Show Leaderboard</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
+              <Trophy className="w-3.5 h-3.5 mr-1" />
+              <span>Leaderboard</span>
+              <ChevronRight className="w-3.5 h-3.5 ml-1" />
+            </Button>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Synchronized Timer Progress Bar */}
-      <div className="w-full bg-slate-900 rounded-full h-2 my-4 overflow-hidden border border-slate-800">
+      <div className="w-full bg-zinc-900 rounded-full h-1.5 my-3 overflow-hidden border border-zinc-800/80">
         <div
           className={`h-full transition-all duration-200 ease-linear rounded-full ${
-            progressPercent > 50
-              ? 'bg-gradient-to-r from-indigo-500 to-emerald-400'
-              : progressPercent > 20
-              ? 'bg-gradient-to-r from-amber-400 to-orange-500'
-              : 'bg-gradient-to-r from-orange-600 to-rose-600 animate-pulse'
+            progressPercent > 20
+              ? 'bg-zinc-300'
+              : 'bg-red-500'
           }`}
           style={{ width: `${progressPercent}%` }}
         />
       </div>
 
       {/* Main Question Display & Media */}
-      <div className="flex-1 flex flex-col items-center justify-center my-4 text-center">
-        <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight max-w-4xl mb-6">
+      <div className="flex-1 flex flex-col items-center justify-center my-3 text-center">
+        <h2 className="text-xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight leading-snug max-w-3xl mb-4">
           {currentQ.text}
         </h2>
 
         {currentQ.imageUrl && (
-          <div className="max-w-xl w-full max-h-64 sm:max-h-80 rounded-3xl overflow-hidden border-2 border-slate-800 shadow-2xl mb-6 bg-slate-950">
+          <div className="max-w-lg w-full max-h-56 sm:max-h-64 rounded-2xl overflow-hidden border border-zinc-800 shadow-xl mb-4 bg-zinc-950">
             <img
               src={currentQ.imageUrl}
               alt="Question illustration"
@@ -164,18 +156,18 @@ export function HostControl({
           </div>
         )}
 
-        {/* Live Answer Distribution Bar Graph while timer is running or revealed */}
-        <div className="w-full max-w-2xl bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 mb-4 backdrop-blur-sm">
-          <div className="flex items-center justify-between text-xs font-bold text-slate-400 mb-2">
-            <span className="flex items-center gap-1.5">
-              <BarChart3 className="w-4 h-4 text-indigo-400" /> Live Response Distribution
+        {/* Live Answer Distribution Bar Graph */}
+        <div className="w-full max-w-xl bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-3.5 mb-2">
+          <div className="flex items-center justify-between text-xs font-medium text-zinc-400 mb-1.5">
+            <span className="flex items-center gap-1">
+              <BarChart3 className="w-3.5 h-3.5 text-zinc-400" /> Response Distribution
             </span>
-            <span>
-              {responseCount} of {totalPlayers} ({totalPlayers > 0 ? Math.round((responseCount / totalPlayers) * 100) : 0}%)
+            <span className="font-mono text-[11px]">
+              {responseCount} / {totalPlayers} answered
             </span>
           </div>
 
-          <div className="grid grid-cols-4 gap-2.5 h-16 items-end pt-2">
+          <div className="grid grid-cols-4 gap-2 h-14 items-end pt-1">
             {OPTION_THEMES.map((theme, idx) => {
               const count = optionCounts[idx];
               const percent = responseCount > 0 ? Math.round((count / responseCount) * 100) : 0;
@@ -183,15 +175,15 @@ export function HostControl({
 
               return (
                 <div key={idx} className="flex flex-col items-center h-full justify-end">
-                  <span className="text-[11px] font-bold text-slate-300 mb-1">
+                  <span className="text-[10px] font-mono font-semibold text-zinc-300 mb-0.5">
                     {count}
                   </span>
-                  <div className="w-full bg-slate-950 rounded-lg h-full max-h-10 flex items-end p-0.5 border border-slate-800">
+                  <div className="w-full bg-zinc-950 rounded h-full max-h-8 flex items-end p-0.5 border border-zinc-800">
                     <div
                       className={`w-full rounded transition-all duration-300 ${theme.bg} ${
-                        isRevealed && isCorrect ? 'ring-2 ring-emerald-400' : ''
+                        isRevealed && isCorrect ? 'ring-1 ring-white' : ''
                       }`}
-                      style={{ height: `${Math.max(8, percent)}%` }}
+                      style={{ height: `${Math.max(10, percent)}%` }}
                     />
                   </div>
                 </div>
@@ -201,8 +193,8 @@ export function HostControl({
         </div>
       </div>
 
-      {/* 4 Colored Response Cards (Kahoot Style Presenter Grid) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+      {/* 4 Clean Options Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
         {currentQ.options.map((optText, optIdx) => {
           const isCorrect = currentQ.correctOptionIndex === optIdx;
           const count = optionCounts[optIdx];
@@ -225,3 +217,5 @@ export function HostControl({
     </div>
   );
 }
+
+export default HostControl;

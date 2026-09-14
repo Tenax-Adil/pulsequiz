@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, Eye, EyeOff, X, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Button } from '../ui/button.jsx';
+import { Input } from '../ui/input.jsx';
 
 export function HostAuthModal({ isOpen, onClose, onSuccess }) {
   const [password, setPassword] = useState('');
@@ -12,7 +14,6 @@ export function HostAuthModal({ isOpen, onClose, onSuccess }) {
     e.preventDefault();
     setError(false);
 
-    // Read configured password or default
     const configuredPass =
       localStorage.getItem('pulse_host_password') ||
       (typeof import.meta !== 'undefined' && import.meta.env?.VITE_HOST_PASSWORD) ||
@@ -33,31 +34,31 @@ export function HostAuthModal({ isOpen, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-md bg-slate-900 border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-7 shadow-2xl">
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+          className="absolute top-4 right-4 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition cursor-pointer"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
 
-        <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mx-auto mb-3 shadow-lg shadow-indigo-500/10">
-            <Lock className="w-7 h-7" />
+        <div className="text-center mb-5">
+          <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center text-zinc-300 mx-auto mb-3 shadow-sm">
+            <Lock className="w-5 h-5" />
           </div>
-          <h3 className="text-2xl font-black text-white tracking-tight">
-            Host Studio Passcode
+          <h3 className="text-lg font-bold text-white tracking-tight">
+            Host Studio Access
           </h3>
-          <p className="text-xs text-slate-400 mt-1">
-            Presenter controls are protected. Enter the host passcode to continue.
+          <p className="text-xs text-zinc-400 mt-1">
+            Enter the host passcode to open presenter controls
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3.5">
           <div>
             <div className="relative">
-              <input
+              <Input
                 type={showPassword ? 'text' : 'password'}
                 autoFocus
                 required
@@ -66,17 +67,13 @@ export function HostAuthModal({ isOpen, onClose, onSuccess }) {
                   setPassword(e.target.value);
                   setError(false);
                 }}
-                placeholder="Enter host password..."
-                className={`w-full bg-slate-950 border rounded-2xl py-3.5 pl-4 pr-12 text-base text-white placeholder-slate-600 focus:outline-none transition ${
-                  error
-                    ? 'border-rose-500 ring-2 ring-rose-500/30'
-                    : 'border-slate-800 focus:border-indigo-500'
-                }`}
+                placeholder="Enter passcode..."
+                className={`h-11 pr-10 text-sm ${error ? 'border-red-600 focus-visible:ring-red-600' : ''}`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-500 hover:text-slate-300 transition cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-zinc-400 hover:text-zinc-200 transition cursor-pointer"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -84,36 +81,39 @@ export function HostAuthModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           {error && (
-            <div className="p-3 bg-rose-950/60 border border-rose-800/50 rounded-xl text-rose-300 text-xs font-semibold text-center animate-shake">
-              Incorrect password. Please try again.
+            <div className="p-2.5 bg-red-950/40 border border-red-900/50 rounded-lg text-red-300 text-xs font-medium text-center">
+              Incorrect passcode. Please try again.
             </div>
           )}
 
-          <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 text-[11px] text-slate-400 flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0" />
+          <div className="bg-zinc-950/60 border border-zinc-800 rounded-lg p-2.5 text-[11px] text-zinc-400 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-zinc-400 shrink-0" />
             <span>
-              Default passcode: <code className="text-indigo-300 font-mono font-bold">admin123</code> (can be changed in settings)
+              Default: <code className="text-zinc-200 font-mono font-semibold">admin123</code>
             </span>
           </div>
 
-          <div className="pt-2 flex gap-3">
-            <button
+          <div className="pt-2 flex gap-2">
+            <Button
               type="button"
+              variant="outline"
               onClick={onClose}
-              className="w-1/3 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer"
+              className="flex-1 border-zinc-800 text-xs h-10"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-extrabold shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2 cursor-pointer"
+              className="flex-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-semibold text-xs h-10"
             >
-              <span>Unlock Studio</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+              <span>Unlock</span>
+              <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            </Button>
           </div>
         </form>
       </div>
     </div>
   );
 }
+
+export default HostAuthModal;

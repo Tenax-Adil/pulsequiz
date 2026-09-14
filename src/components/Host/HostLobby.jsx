@@ -4,16 +4,15 @@ import {
   QrCode,
   Play,
   Bot,
-  Trash2,
   Copy,
-  Check,
-  Sparkles,
-  Zap,
-  Volume2
+  Check
 } from 'lucide-react';
 import { QRModal } from '../Common/QRModal.jsx';
 import { botSimulator } from '../../services/mockBots.js';
 import { soundFx } from '../../services/audio.js';
+import { Button } from '../ui/button.jsx';
+import { Badge } from '../ui/badge.jsx';
+import { Card } from '../ui/card.jsx';
 
 export function HostLobby({ room, onStartQuiz, onCancelRoom }) {
   const [showQR, setShowQR] = useState(false);
@@ -22,8 +21,6 @@ export function HostLobby({ room, onStartQuiz, onCancelRoom }) {
 
   const players = room?.players ? Object.values(room.players) : [];
   const playerCount = players.length;
-
-  const joinUrl = `${window.location.origin}/?code=${room.roomCode}`;
 
   const copyCode = () => {
     navigator.clipboard.writeText(room.roomCode);
@@ -40,102 +37,104 @@ export function HostLobby({ room, onStartQuiz, onCancelRoom }) {
     }
   };
 
-  const handleClearBots = () => {
-    botSimulator.clearBots();
-  };
-
   const handleStartGame = () => {
     soundFx.playCorrect();
     onStartQuiz();
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 flex flex-col min-h-[calc(100vh-5rem)] justify-between">
-      {/* Top Bar: Title & QR Code / Copy Quick Actions */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/70 border border-slate-800 p-6 rounded-3xl backdrop-blur-md">
+    <div className="max-w-5xl mx-auto px-4 py-8 flex flex-col min-h-[calc(100vh-5rem)] justify-between animate-fade-in-up">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-5 border-b border-zinc-800">
         <div>
-          <span className="text-xs font-bold uppercase tracking-widest text-indigo-400">
-            Lobby &bull; {room.questions?.length || 0} Questions Ready
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+            Lobby Stage &bull; {room.questions?.length || 0} Questions
           </span>
-          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            {room.title || 'Live Interactive Quiz'}
+          <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+            {room.title || 'Live Quiz'}
           </h2>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setShowQR(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 transition cursor-pointer"
+            className="border-zinc-800 text-zinc-300 h-9"
           >
-            <QrCode className="w-4 h-4 text-indigo-400" />
-            <span>Join QR</span>
-          </button>
+            <QrCode className="w-4 h-4 mr-1.5 text-zinc-400" />
+            <span>QR Code</span>
+          </Button>
 
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={copyCode}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 transition cursor-pointer"
+            className="border-zinc-800 text-zinc-300 h-9"
           >
             {copied ? (
               <>
-                <Check className="w-4 h-4 text-emerald-400" /> Copied Code!
+                <Check className="w-4 h-4 mr-1.5 text-emerald-400" />
+                <span>Copied</span>
               </>
             ) : (
               <>
-                <Copy className="w-4 h-4 text-slate-400" /> Copy PIN
+                <Copy className="w-4 h-4 mr-1.5 text-zinc-400" />
+                <span>Copy PIN</span>
               </>
             )}
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* Center Stage: Huge Kahoot 6-digit Room PIN Display */}
+      {/* Center Stage: Clean, High-Contrast 6-digit PIN */}
       <div className="my-8 text-center">
-        <span className="text-sm uppercase font-extrabold tracking-widest text-slate-400 block mb-2">
-          Join at <span className="text-indigo-400 underline font-mono">{window.location.host}</span> with Game PIN:
+        <span className="text-xs uppercase font-semibold tracking-widest text-zinc-400 block mb-2">
+          Join at <span className="text-zinc-200 font-mono font-bold">{window.location.host}</span> with Game PIN:
         </span>
 
         <div
           onClick={copyCode}
-          className="inline-flex items-center justify-center bg-gradient-to-br from-indigo-950/80 via-slate-900 to-purple-950/80 border-2 border-indigo-500/50 rounded-3xl px-8 sm:px-16 py-6 sm:py-8 shadow-2xl shadow-indigo-500/20 cursor-pointer hover:border-indigo-400 hover:scale-[1.02] transition"
+          className="inline-flex items-center justify-center bg-zinc-900/90 border border-zinc-700/80 rounded-2xl px-8 sm:px-14 py-5 sm:py-7 shadow-xl cursor-pointer hover:border-zinc-500 transition active:scale-[0.99]"
         >
-          <span className="text-6xl sm:text-8xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-indigo-300 font-mono select-all">
+          <span className="text-5xl sm:text-7xl font-mono font-bold tracking-widest text-white select-all">
             {room.roomCode}
           </span>
         </div>
 
-        {/* Dynamic Participant Counter */}
-        <div className="mt-6 flex items-center justify-center gap-3">
-          <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-5 py-2.5 rounded-full">
-            <Users className="w-5 h-5 text-pink-400" />
-            <span className="text-lg font-black text-white">{playerCount}</span>
-            <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
+        {/* Participant Counter & Simulator */}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <Badge variant="secondary" className="gap-2 px-3 py-1.5 bg-zinc-900 border-zinc-800 text-sm font-semibold">
+            <Users className="w-4 h-4 text-zinc-400" />
+            <span className="font-mono text-white">{playerCount}</span>
+            <span className="text-zinc-400 text-xs font-normal">
               {playerCount === 1 ? 'Player Joined' : 'Players Joined'}
             </span>
-          </div>
+          </Badge>
 
-          {/* Quick 200-Player Load Testing Simulator Buttons */}
-          <div className="flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 p-1 rounded-full">
-            <span className="text-[11px] font-bold text-slate-400 px-2 flex items-center gap-1">
-              <Bot className="w-3.5 h-3.5 text-indigo-400" /> Sim:
+          {/* Bot simulator */}
+          <div className="flex items-center gap-1 bg-zinc-900/80 border border-zinc-800 p-1 rounded-lg">
+            <span className="text-[11px] text-zinc-400 px-2 flex items-center gap-1">
+              <Bot className="w-3.5 h-3.5" /> Test:
             </span>
             <button
               onClick={() => handleSpawnBots(10)}
               disabled={spawningBots}
-              className="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 hover:text-white transition cursor-pointer"
+              className="px-2 py-0.5 rounded text-xs font-mono font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition cursor-pointer"
             >
               +10
             </button>
             <button
               onClick={() => handleSpawnBots(50)}
               disabled={spawningBots}
-              className="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 hover:text-white transition cursor-pointer"
+              className="px-2 py-0.5 rounded text-xs font-mono font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition cursor-pointer"
             >
               +50
             </button>
             <button
               onClick={() => handleSpawnBots(200)}
               disabled={spawningBots}
-              className="px-2.5 py-1 rounded-full bg-indigo-900/50 hover:bg-indigo-800 text-xs font-extrabold text-indigo-300 hover:text-white transition cursor-pointer"
+              className="px-2 py-0.5 rounded text-xs font-mono font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition cursor-pointer"
             >
               +200
             </button>
@@ -143,54 +142,53 @@ export function HostLobby({ room, onStartQuiz, onCancelRoom }) {
         </div>
       </div>
 
-      {/* Participant List (Adaptive Grid) */}
-      <div className="bg-slate-900/50 border border-slate-800/80 rounded-3xl p-6 mb-8 flex-1 min-h-[160px] max-h-[300px] overflow-y-auto">
+      {/* Participant List */}
+      <Card className="border-zinc-800/80 bg-zinc-900/50 p-5 mb-6 flex-1 min-h-[140px] max-h-[260px] overflow-y-auto">
         {playerCount === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center py-8">
-            <div className="w-12 h-12 rounded-full bg-slate-800/80 border border-slate-700 flex items-center justify-center text-slate-400 mb-3 animate-pulse">
-              <Users className="w-6 h-6" />
-            </div>
-            <p className="text-base font-bold text-slate-300">
-              Waiting for players to enter the PIN...
+          <div className="h-full flex flex-col items-center justify-center text-center py-6">
+            <Users className="w-8 h-8 text-zinc-600 mb-2 animate-pulse" />
+            <p className="text-sm font-semibold text-zinc-400">
+              Waiting for players to connect...
             </p>
-            <p className="text-xs text-slate-500 mt-1">
-              Share the room code or click &quot;+10 Sim&quot; to test with simulated participants
+            <p className="text-xs text-zinc-600 mt-0.5">
+              Share the room PIN or use the test button above
             </p>
           </div>
         ) : (
-          <div className="flex flex-wrap gap-2.5 justify-center">
+          <div className="flex flex-wrap gap-2 justify-center">
             {players.map((p, idx) => (
               <div
                 key={p.id || idx}
-                className="flex items-center gap-2 bg-slate-800/90 border border-slate-700/70 px-4 py-2 rounded-2xl shadow-sm animate-fade-in hover:border-indigo-500/50 transition"
+                className="flex items-center gap-2 bg-zinc-800/80 border border-zinc-700/60 px-3 py-1.5 rounded-xl shadow-sm text-xs font-medium text-zinc-200 animate-fade-in"
               >
-                <span className="text-lg">{p.avatar || '⚡'}</span>
-                <span className="text-sm font-bold text-white tracking-wide">
-                  {p.nickname}
-                </span>
+                <span>{p.avatar || '⚡'}</span>
+                <span>{p.nickname}</span>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Bottom Host Launch Control */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-800">
-        <button
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-zinc-800">
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onCancelRoom}
-          className="text-xs font-bold text-slate-500 hover:text-rose-400 transition cursor-pointer"
+          className="text-xs text-zinc-500 hover:text-red-400"
         >
-          Cancel & Exit Room
-        </button>
+          Cancel &amp; Exit Room
+        </Button>
 
-        <button
+        <Button
+          size="lg"
           onClick={handleStartGame}
           disabled={playerCount === 0}
-          className="w-full sm:w-auto px-10 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-white font-black text-xl shadow-2xl shadow-emerald-500/30 flex items-center justify-center gap-3 transition transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-bold px-8 shadow-sm h-11"
         >
-          <Play className="w-6 h-6 fill-white" />
+          <Play className="w-4 h-4 fill-zinc-950 mr-2" />
           <span>Start Quiz ({playerCount})</span>
-        </button>
+        </Button>
       </div>
 
       <QRModal
@@ -201,3 +199,5 @@ export function HostLobby({ room, onStartQuiz, onCancelRoom }) {
     </div>
   );
 }
+
+export default HostLobby;

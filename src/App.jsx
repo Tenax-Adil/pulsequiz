@@ -301,7 +301,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-pink-500 selection:text-white">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-zinc-800 selection:text-zinc-100">
       <Navbar
         currentView={navRole}
         onViewChange={(view) => {
@@ -396,11 +396,11 @@ export function App() {
               />
             ) : !room ? (
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-                <div className="w-12 h-12 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin mb-4" />
-                <h3 className="text-xl font-bold text-white mb-1">
+                <div className="w-10 h-10 rounded-full border-2 border-zinc-700 border-t-zinc-200 animate-spin mb-4" />
+                <h3 className="text-lg font-semibold text-zinc-200 mb-1">
                   Connecting to Game Room...
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-zinc-500 font-mono">
                   PIN: {studentRoomCode}
                 </p>
               </div>
@@ -443,7 +443,7 @@ export function App() {
       </main>
 
       {navRole === 'student' && (
-        <footer className="py-5 text-center text-xs text-slate-500 border-t border-slate-900/80 flex items-center justify-center gap-3">
+        <footer className="py-5 text-center text-xs text-zinc-600 border-t border-zinc-900 flex items-center justify-center gap-3">
           <span>PulseQuiz Real-Time Live</span>
           <span>&bull;</span>
           <button
@@ -454,9 +454,9 @@ export function App() {
                 setShowHostAuthModal(true);
               }
             }}
-            className="hover:text-indigo-400 text-slate-500 transition cursor-pointer flex items-center gap-1.5"
+            className="hover:text-zinc-300 text-zinc-500 transition-colors cursor-pointer flex items-center gap-1.5"
           >
-            <Lock className="w-3 h-3 text-slate-500" />
+            <Lock className="w-3 h-3 text-zinc-500" />
             <span>Host Portal (Passcode Required)</span>
           </button>
         </footer>
