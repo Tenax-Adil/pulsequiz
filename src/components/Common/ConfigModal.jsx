@@ -10,6 +10,7 @@ export function ConfigModal({ isOpen, onClose }) {
   const [firebaseDbUrl, setFirebaseDbUrl] = useState('');
   const [firebaseProjectId, setFirebaseProjectId] = useState('');
   const [geminiKey, setGeminiKey] = useState('');
+  const [imgbbKey, setImgbbKey] = useState('');
   const [cloudinaryCloud, setCloudinaryCloud] = useState('');
   const [cloudinaryPreset, setCloudinaryPreset] = useState('');
   const [hostPassword, setHostPassword] = useState('admin123');
@@ -19,6 +20,7 @@ export function ConfigModal({ isOpen, onClose }) {
     if (!isOpen) return;
 
     setGeminiKey(localStorage.getItem('pulse_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY || '');
+    setImgbbKey(localStorage.getItem('pulse_imgbb_api_key') || import.meta.env.VITE_IMGBB_API_KEY || '');
     setCloudinaryCloud(localStorage.getItem('pulse_cloudinary_cloud') || import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '');
     setCloudinaryPreset(localStorage.getItem('pulse_cloudinary_preset') || import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '');
     setHostPassword(localStorage.getItem('pulse_host_password') || import.meta.env.VITE_HOST_PASSWORD || 'admin123');
@@ -40,6 +42,12 @@ export function ConfigModal({ isOpen, onClose }) {
       localStorage.setItem('pulse_gemini_key', geminiKey.trim());
     } else {
       localStorage.removeItem('pulse_gemini_key');
+    }
+
+    if (imgbbKey.trim()) {
+      localStorage.setItem('pulse_imgbb_api_key', imgbbKey.trim());
+    } else {
+      localStorage.removeItem('pulse_imgbb_api_key');
     }
 
     if (cloudinaryCloud.trim()) {
@@ -187,6 +195,33 @@ export function ConfigModal({ isOpen, onClose }) {
                 />
               </div>
             </div>
+          </div>
+
+          {/* Section: ImgBB Free Image Hosting */}
+          <div className="bg-zinc-950/60 p-3.5 rounded-xl border border-zinc-800/80">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+                <Cloud className="w-3.5 h-3.5 text-zinc-400" /> ImgBB Free Image Hosting (Optional)
+              </label>
+              <a
+                href="https://api.imgbb.com/"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] text-zinc-400 hover:text-zinc-200 underline"
+              >
+                Get Free Key
+              </a>
+            </div>
+            <Input
+              type="password"
+              placeholder="Paste your ImgBB API key here..."
+              value={imgbbKey}
+              onChange={(e) => setImgbbKey(e.target.value)}
+              className="h-9 font-mono text-xs"
+            />
+            <span className="text-[11px] text-zinc-500 block mt-1">
+              Preserves 100% full original resolution and exact aspect ratio on high-speed CDN.
+            </span>
           </div>
 
           {/* Section 3: Host Passcode */}

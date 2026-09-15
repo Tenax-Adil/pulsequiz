@@ -11,7 +11,8 @@ import {
   Play,
   Copy,
   Save,
-  Check
+  Check,
+  AlertCircle
 } from 'lucide-react';
 import { uploadQuestionImage } from '../../services/storage.js';
 import { OPTION_THEMES } from '../Common/AnswerButton.jsx';
@@ -102,8 +103,10 @@ export function QuizEditor({ initialQuiz, onStartRoom, onSaveQuiz, onBack, onOpe
 
     setUploadingImage(true);
     try {
-      const url = await uploadQuestionImage(file);
-      updateCurrentQuestion({ imageUrl: url });
+      const res = await uploadQuestionImage(file);
+      const finalUrl = typeof res === 'string' ? res : res?.url;
+      if (!finalUrl) throw new Error('No image URL returned from upload');
+      updateCurrentQuestion({ imageUrl: finalUrl });
     } catch (err) {
       alert(err.message || 'Image upload failed.');
     } finally {
@@ -341,75 +344,101 @@ export function QuizEditor({ initialQuiz, onStartRoom, onSaveQuiz, onBack, onOpe
             />
           </Card>
 
-          {/* Media Attachment */}
+          {/* Media Attachment / Question Hint */}
           <Card className="border-zinc-800 bg-zinc-900/80 p-5">
             <div className="flex items-center justify-between mb-3">
               <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                <ImageIcon className="w-3.5 h-3.5 text-zinc-400" /> Image Attachment (Optional)
+                <ImageIcon className="w-3.5 h-3.5 text-zinc-400" /> Image Hint / Visual (Optional)
               </label>
               {currentQ.imageUrl && (
                 <button
+                  type="button"
                   onClick={() => updateCurrentQuestion({ imageUrl: '' })}
-                  className="text-xs text-red-400 hover:underline cursor-pointer"
+                  className="text-xs text-red-400 hover:text-red-300 hover:underline cursor-pointer"
                 >
-                  Remove
+                  Clear Image
                 </button>
               )}
             </div>
 
-            {currentQ.imageUrl ? (
-              <div className="relative rounded-xl overflow-hidden max-h-52 bg-black border border-zinc-800 group">
-                <img
-                  src={currentQ.imageUrl}
-                  alt="Question Attachment"
-                  className="w-full h-52 object-cover"
+            {/* Input & Upload Controls: Always visible */}
+            <div className="flex flex-col sm:flex-row gap-2 mb-2.5">
+              <div className="relative flex-1">
+                <Input
+                  type="text"
+                  placeholder="Paste any image URL (e.g. from Google Images, Unsplash)..."
+                  value={currentQ.imageUrl || ''}
+                  onChange={(e) => updateCurrentQuestion({ imageUrl: e.target.value.trim() })}
+                  className="h-9 text-xs bg-zinc-950 font-mono"
                 />
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
-                  <label className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-xs font-medium cursor-pointer transition">
-                    Change Image
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleImageFileChange}
-                    />
-                  </label>
-                  <button
-                    onClick={() => updateCurrentQuestion({ imageUrl: '' })}
-                    className="px-3 py-1.5 bg-red-900/80 hover:bg-red-800 text-white rounded-lg text-xs font-medium cursor-pointer transition"
-                  >
-                    Delete
-                  </button>
+              </div>
+
+              <label className="inline-flex items-center justify-center gap-1.5 px-3.5 h-9 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium cursor-pointer transition whitespace-nowrap border border-zinc-700">
+                <Upload className="w-3.5 h-3.5 text-zinc-300" />
+                <span>{uploadingImage ? 'Loading...' : 'Upload File'}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageFileChange}
+                  disabled={uploadingImage}
+                />
+              </label>
+            </div>
+
+            {/* Quick Sample Presets */}
+            <div className="flex items-center gap-1.5 flex-wrap mb-3">
+              <span className="text-[10px] text-zinc-500">Quick samples:</span>
+              {[
+                { name: 'Tech', url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=900&auto=format&fit=crop&q=80' },
+                { name: 'Space', url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=900&auto=format&fit=crop&q=80' },
+                { name: 'Nature', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900&auto=format&fit=crop&q=80' },
+                { name: 'City', url: 'https://images.unsplash.com/photo-1477959858617-67f30bc75b82?w=900&auto=format&fit=crop&q=80' },
+              ].map((preset) => (
+                <button
+                  key={preset.name}
+                  type="button"
+                  onClick={() => updateCurrentQuestion({ imageUrl: preset.url })}
+                  className="text-[10px] px-2 py-0.5 rounded-md bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors cursor-pointer border border-zinc-700/60"
+                >
+                  +{preset.name}
+                </button>
+              ))}
+            </div>
+
+            {/* Live Image Preview */}
+            {currentQ.imageUrl ? (
+              <div className="relative rounded-xl overflow-hidden border border-zinc-800 bg-zinc-950 p-2.5 flex items-center justify-center min-h-[160px] group">
+                <img
+                  key={currentQ.imageUrl}
+                  src={currentQ.imageUrl}
+                  alt="Question Hint Preview"
+                  className="max-h-[300px] sm:max-h-[360px] max-w-full w-auto h-auto object-contain rounded-lg mx-auto block shadow-sm"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    const errorEl = document.getElementById('img-preview-error');
+                    if (errorEl) errorEl.classList.remove('hidden');
+                  }}
+                  onLoad={(e) => {
+                    e.currentTarget.style.display = 'block';
+                    const errorEl = document.getElementById('img-preview-error');
+                    if (errorEl) errorEl.classList.add('hidden');
+                  }}
+                />
+                <div
+                  id="img-preview-error"
+                  className="hidden flex-col items-center justify-center text-center p-4 text-zinc-400"
+                >
+                  <AlertCircle className="w-5 h-5 text-amber-400 mb-1" />
+                  <span className="text-xs font-semibold text-zinc-200">Unable to load image preview</span>
+                  <span className="text-[11px] text-zinc-500">Please check that the image URL is valid and publicly accessible.</span>
                 </div>
               </div>
             ) : (
-              <div className="border border-dashed border-zinc-800 hover:border-zinc-700 rounded-xl p-5 text-center transition">
-                <div className="flex flex-col items-center justify-center">
-                  <Upload className="w-5 h-5 text-zinc-500 mb-2" />
-                  <label className="px-3.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium rounded-lg cursor-pointer transition mb-1.5">
-                    {uploadingImage ? 'Processing...' : 'Upload Image'}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleImageFileChange}
-                      disabled={uploadingImage}
-                    />
-                  </label>
-                  <span className="text-[11px] text-zinc-500">
-                    JPG, PNG, or WebP
-                  </span>
-
-                  <div className="mt-3 w-full max-w-sm">
-                    <Input
-                      type="text"
-                      placeholder="Or paste an image URL..."
-                      value={currentQ.imageUrl}
-                      onChange={(e) => updateCurrentQuestion({ imageUrl: e.target.value })}
-                      className="h-8 text-xs bg-zinc-950"
-                    />
-                  </div>
-                </div>
+              <div className="border border-dashed border-zinc-800/80 rounded-xl p-4 text-center">
+                <span className="text-[11px] text-zinc-500">
+                  No image attached. Upload a file or paste any image link above to add a visual hint for this question.
+                </span>
               </div>
             )}
           </Card>

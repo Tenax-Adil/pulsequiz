@@ -4,7 +4,9 @@ import {
   Clock,
   ChevronRight,
   Trophy,
-  BarChart3
+  BarChart3,
+  Maximize2,
+  X
 } from 'lucide-react';
 import { AnswerButton, OPTION_THEMES } from '../Common/AnswerButton.jsx';
 import { useQuizTimer } from '../../hooks/useQuizTimer.js';
@@ -147,12 +149,23 @@ export function HostControl({
         </h2>
 
         {currentQ.imageUrl && (
-          <div className="max-w-lg w-full max-h-56 sm:max-h-64 rounded-2xl overflow-hidden border border-zinc-800 shadow-xl mb-4 bg-zinc-950">
-            <img
-              src={currentQ.imageUrl}
-              alt="Question illustration"
-              className="w-full h-full object-cover"
-            />
+          <div className="w-full max-w-2xl mx-auto my-3 flex items-center justify-center">
+            <div className="relative rounded-2xl overflow-hidden border border-zinc-800/90 bg-zinc-950/80 shadow-2xl p-1.5 flex items-center justify-center max-w-full group">
+              <img
+                src={currentQ.imageUrl}
+                alt="Question Hint"
+                className="max-h-[380px] sm:max-h-[460px] max-w-full w-auto h-auto object-contain rounded-xl mx-auto block cursor-pointer transition-transform hover:scale-[1.01]"
+                onClick={() => setZoomedImage(currentQ.imageUrl)}
+              />
+              <button
+                type="button"
+                onClick={() => setZoomedImage(currentQ.imageUrl)}
+                className="absolute bottom-3 right-3 px-2.5 py-1 bg-black/75 hover:bg-black/90 text-white rounded-lg text-xs font-medium backdrop-blur-md border border-white/20 transition flex items-center gap-1.5 cursor-pointer shadow-lg"
+                title="View Full Size"
+              >
+                <Maximize2 className="w-3.5 h-3.5" /> Full Size
+              </button>
+            </div>
           </div>
         )}
 
@@ -214,6 +227,29 @@ export function HostControl({
           );
         })}
       </div>
+
+      {/* Full Size Image Lightbox Modal */}
+      {zoomedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-150 cursor-pointer"
+          onClick={() => setZoomedImage(null)}
+        >
+          <div className="relative max-w-5xl max-h-[92vh] flex flex-col items-center justify-center">
+            <button
+              onClick={() => setZoomedImage(null)}
+              className="absolute -top-11 right-0 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:text-white rounded-lg bg-zinc-900 border border-zinc-700 transition cursor-pointer flex items-center gap-1.5"
+            >
+              <X className="w-4 h-4" /> Close
+            </button>
+            <img
+              src={zoomedImage}
+              alt="Full Size View"
+              className="max-h-[88vh] max-w-full w-auto h-auto object-contain rounded-xl shadow-2xl border border-zinc-800"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
