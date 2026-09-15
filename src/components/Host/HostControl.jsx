@@ -34,6 +34,7 @@ export function HostControl({
   const responseCount = answeredPlayerIds.length;
 
   const [isRevealed, setIsRevealed] = useState(room.isQuestionRevealed || false);
+  const [zoomedImage, setZoomedImage] = useState(null);
 
   // Synchronized countdown timer
   const { timeLeft, progressPercent } = useQuizTimer({
