@@ -2,12 +2,11 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   X, MapPin, Upload, AlertCircle,
   Plus, Compass, Key, Sparkles,
-  ExternalLink, Search, Landmark, Loader2, CheckCircle2,
+  ExternalLink, Search, Loader2, CheckCircle2,
   Edit3, Check
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { CURATED_360_LANDMARKS } from '../../data/geoCuratedLandmarks.js';
 import { compressImageFile } from '../../services/storage.js';
 import { haversineDistance } from '../../services/geoEngine.js';
 
@@ -35,20 +34,7 @@ const PICKER_PIN_ICON = L.divIcon({
   iconAnchor: [12, 32],
 });
 
-const LANDMARK_PIN_ICON = L.divIcon({
-  className: 'geo-landmark-marker',
-  html: `<div style="
-    width: 18px; height: 18px;
-    background: #3b82f6;
-    border: 2px solid white;
-    border-radius: 50%;
-    box-shadow: 0 0 10px #3b82f688;
-    position: relative;
-    cursor: pointer;
-  "></div>`,
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
-});
+
 
 // Popular verified 360 spots with guaranteed Google Street View coverage
 const POPULAR_360_SPOTS = [
@@ -145,7 +131,6 @@ export function GeoAddLocationModal({
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const userMarkerRef = useRef(null);
-  const landmarkMarkersRef = useRef([]);
 
   // Auto-reverse geocode coordinates to fill name
   const reverseGeocode = useCallback(async (clickedLat, clickedLon) => {
@@ -175,25 +160,7 @@ export function GeoAddLocationModal({
     }
   }, [name]);
 
-  // Handle selecting a curated landmark
-  const handleSelectLandmark = useCallback((lm) => {
-    setName(lm.name);
-    setClue(lm.clue);
-    setLat(lm.lat.toString());
-    setLon(lm.lon.toString());
-    setToleranceKm(lm.toleranceKm || 150);
-    setPreviewUrl(lm.panoramaUrl);
-    setCustomUrl(lm.panoramaUrl);
 
-    if (mapRef.current) {
-      mapRef.current.setView([lm.lat, lm.lon], 5);
-      if (userMarkerRef.current) {
-        userMarkerRef.current.setLatLng([lm.lat, lm.lon]);
-      } else {
-        userMarkerRef.current = L.marker([lm.lat, lm.lon], { icon: PICKER_PIN_ICON }).addTo(mapRef.current);
-      }
-    }
-  }, []);
 
   // Check Google Street View metadata
   const checkStreetViewCoverage = useCallback(async (checkLat, checkLon, apiKey) => {
@@ -438,20 +405,6 @@ export function GeoAddLocationModal({
         reverseGeocode(clickedLat, clickedLon);
       });
 
-      // Add landmark markers to map
-      landmarkMarkersRef.current = CURATED_360_LANDMARKS.map((lm) => {
-        const marker = L.marker([lm.lat, lm.lon], { icon: LANDMARK_PIN_ICON, title: lm.name })
-          .addTo(map)
-          .bindTooltip(`<b>${lm.name}</b><br><span style="font-size:11px;color:#cbd5e1">Click to select 360 view</span>`, { direction: 'top' });
-
-        marker.on('click', (ev) => {
-          L.DomEvent.stopPropagation(ev);
-          handleSelectLandmark(lm);
-        });
-
-        return marker;
-      });
-
       mapRef.current = map;
       setTimeout(() => map.invalidateSize(), 150);
     }, 100);
@@ -463,9 +416,8 @@ export function GeoAddLocationModal({
         mapRef.current = null;
       }
       userMarkerRef.current = null;
-      landmarkMarkersRef.current = [];
     };
-  }, [isOpen, editLocation, handleSelectLandmark, reverseGeocode]);
+  }, [isOpen, editLocation, reverseGeocode]);
 
   // Sync marker when manual lat/lon changes
   useEffect(() => {
@@ -591,7 +543,7 @@ export function GeoAddLocationModal({
                 {editLocation ? 'Edit Geo Question & Location' : 'Add 360° Location'}
               </h2>
               <p className="text-xs text-zinc-400">
-                {editLocation ? 'Update clue, coordinates, scoring tolerance, or 360° panorama' : 'Add Google Street View, curated landmarks, or 360 images'}
+                {editLocation ? 'Update clue, coordinates, scoring tolerance, or 360° panorama' : 'Pick any spot on Google Street View or upload a 360° panorama'}
               </p>
             </div>
           </div>
@@ -617,18 +569,6 @@ export function GeoAddLocationModal({
           >
             <Compass className="w-4 h-4" />
             <span>Google 360 Street View (Click Map)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('curated')}
-            className={`pb-2.5 px-3 border-b-2 transition cursor-pointer flex items-center gap-2 ${
-              activeTab === 'curated'
-                ? 'border-blue-500 text-blue-400'
-                : 'border-transparent text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            <Landmark className="w-4 h-4" />
-            <span>World Landmarks (Zero Key)</span>
           </button>
           <button
             type="button"
@@ -921,32 +861,7 @@ export function GeoAddLocationModal({
             </div>
           )}
 
-          {/* ─── TAB 2: CURATED WORLD LANDMARKS ───────────────────────── */}
-          {activeTab === 'curated' && (
-            <div className="space-y-2">
-              <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wider block">
-                Quick Select 360° World Landmark (Zero Key Needed):
-              </span>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
-                {CURATED_360_LANDMARKS.map((lm) => (
-                  <button
-                    key={lm.id}
-                    type="button"
-                    onClick={() => handleSelectLandmark(lm)}
-                    className={`p-2 rounded-xl border text-left transition cursor-pointer ${
-                      name === lm.name
-                        ? 'bg-blue-500/20 border-blue-500 text-blue-200 shadow-md'
-                        : 'bg-zinc-800/60 border-zinc-700 hover:border-zinc-500 text-zinc-300'
-                    }`}
-                  >
-                    <div className="text-xs font-bold truncate">{lm.name.split(',')[0]}</div>
-                    <div className="text-[10px] text-zinc-400 truncate">{lm.name.split(',').slice(1).join(',')}</div>
-                    <div className="text-[9px] text-blue-400 mt-1 font-semibold">{lm.category} &bull; 360° Live</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+
 
           {/* ─── TAB 3: CUSTOM 360 IMAGE UPLOAD ───────────────────────── */}
           {activeTab === 'custom' && (

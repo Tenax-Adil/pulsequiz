@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useGeoRoomSync } from '../../hooks/useGeoRoomSync.js';
 import { GEO_STATES, haversineDistance, calculateGeoScore, formatDistance, formatPoints, getRankLabel, GEO_TIMERS } from '../../services/geoEngine.js';
-import { createGeoRoom, generateRoomCode, saveGeoQuiz, closeGeoRoom, recordGeoGameHistory } from '../../services/geoFirebase.js';
-import { GEO_LOCATIONS } from '../../data/geoLocations.js';
+import { createGeoRoom, generateRoomCode, saveGeoQuiz, closeGeoRoom, recordGeoGameHistory, fetchSavedGeoQuizzes } from '../../services/geoFirebase.js';
 import { GeoLeafletMap } from './GeoLeafletMap.jsx';
 import { GeoPanorama } from './GeoPanorama.jsx';
 import { GeoTimer } from './GeoTimer.jsx';
@@ -12,7 +11,7 @@ import {
   RotateCcw, Map as MapIcon, Crosshair, Trophy,
   ArrowRight, Copy, ExternalLink, Eye, EyeOff, Plus,
   Footprints, RefreshCw, Save, BookOpen, LogOut, ArrowLeft,
-  History, Sparkles, Edit3, ChevronUp, ChevronDown
+  History, Sparkles, Edit3, ChevronUp, ChevronDown, Trash2, MapPin
 } from 'lucide-react';
 import { GeoAddLocationModal } from './GeoAddLocationModal.jsx';
 import { GeoQuizLibraryModal } from './GeoQuizLibraryModal.jsx';
@@ -26,31 +25,51 @@ import { GeoAIGeneratorModal } from './GeoAIGeneratorModal.jsx';
 export function GeoHostDashboard({ roomCode: initialRoomCode }) {
   const [roomCode, setRoomCode] = useState(initialRoomCode || '');
   const [setupMode, setSetupMode] = useState(!initialRoomCode);
-  const [quizTitle, setQuizTitle] = useState('World Wonders Finale');
+  const [quizTitle, setQuizTitle] = useState('');
   const [currentQuizId, setCurrentQuizId] = useState(null);
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isAIGeneratorOpen, setIsAIGeneratorOpen] = useState(false);
   const [saveNotification, setSaveNotification] = useState('');
+  const [savedQuizCount, setSavedQuizCount] = useState(0);
   const recordedGeoHistoryRef = useRef(new Set());
 
+  // Clean initial state: do NOT pre-load any sample or old curated quiz
   const [selectedLocations, setSelectedLocations] = useState(() => {
     try {
       const saved = localStorage.getItem('pulse_custom_geo_locations');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return [...GEO_LOCATIONS, ...parsed];
+        if (Array.isArray(parsed) && parsed.length > 0 && !parsed.some(l => l.id === 'geo_1' || l.id === 'geo_2' || l.name?.includes('Eiffel Tower'))) {
+          return parsed;
         }
       }
     } catch { /* ignore */ }
-    return [...GEO_LOCATIONS];
+    return [];
   });
   const [hostPanoMode, setHostPanoMode] = useState(true);
   const [hostPeek, setHostPeek] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingLocationIndex, setEditingLocationIndex] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Clean out any stale legacy sample data from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('pulse_custom_geo_locations');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.some(l => l.id === 'geo_1' || l.id === 'geo_2' || l.name?.includes('Eiffel Tower'))) {
+          localStorage.removeItem('pulse_custom_geo_locations');
+        }
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  // Sync saved quiz count for library badge
+  useEffect(() => {
+    fetchSavedGeoQuizzes().then(list => setSavedQuizCount(list.length)).catch(() => {});
+  }, [isLibraryOpen, saveNotification]);
 
   useEffect(() => {
     if (initialRoomCode) {
@@ -141,9 +160,12 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
     });
   };
 
-  const handleResetToDefaults = () => {
-    setSelectedLocations([...GEO_LOCATIONS]);
-    setQuizTitle('World Wonders Finale');
+  const handleClearQuiz = () => {
+    if (selectedLocations.length > 0 && !confirm('Clear all locations and start a fresh quiz?')) {
+      return;
+    }
+    setSelectedLocations([]);
+    setQuizTitle('');
     setCurrentQuizId(null);
     try {
       localStorage.removeItem('pulse_custom_geo_locations');
@@ -176,15 +198,18 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
   };
 
   const handleSelectSavedQuiz = (quiz) => {
-    setQuizTitle(quiz.title);
+    setQuizTitle(quiz.title || '');
     setSelectedLocations(quiz.locations || []);
     setCurrentQuizId(quiz.isPreset ? null : quiz.id);
   };
 
   const handleNewBlankQuiz = () => {
-    setQuizTitle('New Custom Geo Quiz');
+    setQuizTitle('');
     setSelectedLocations([]);
     setCurrentQuizId(null);
+    try {
+      localStorage.removeItem('pulse_custom_geo_locations');
+    } catch { /* ignore */ }
   };
 
   const handleAIGeneratedGeoQuiz = ({ title, locations }) => {
@@ -452,64 +477,76 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
   // ─── SETUP MODE ────────────────────────────────────────────
   if (setupMode) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 p-6">
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 p-4 sm:p-6">
         <div className="max-w-4xl mx-auto">
-          {/* Top Bar with Back Button */}
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-zinc-800/80">
+          {/* Top Bar Navigation */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-zinc-800/80">
             <button
               type="button"
               onClick={handleExitRoom}
               className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 text-xs font-semibold transition cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Back to Host Dashboard</span>
+              <span>Back to Host</span>
             </button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              {selectedLocations.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleSaveCurrentQuiz}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold transition cursor-pointer"
+                    title="Save current quiz to your library"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>Save Quiz</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClearQuiz}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-red-400 hover:border-red-500/30 text-xs font-semibold transition cursor-pointer"
+                    title="Clear all locations and start over"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Clear</span>
+                  </button>
+                </>
+              )}
+
               <button
                 type="button"
                 onClick={() => setIsAIGeneratorOpen(true)}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold transition cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 text-xs font-bold transition shadow-sm cursor-pointer"
                 title="Generate custom Geo Quiz using Gemini AI"
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>AI Generator</span>
+                <span>AI Generate</span>
               </button>
-              <button
-                type="button"
-                onClick={() => setIsHistoryOpen(true)}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs font-semibold transition cursor-pointer"
-                title="View previous GeoGuessr match history and scorecards"
-              >
-                <History className="w-3.5 h-3.5 text-amber-400" />
-                <span>Geo History</span>
-              </button>
+
               <button
                 type="button"
                 onClick={() => setIsLibraryOpen(true)}
                 className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs font-semibold transition cursor-pointer"
-                title="Browse curated presets and your saved Geo Quizzes"
+                title="Open your saved Geo Quizzes"
               >
                 <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-                <span>Geo Quiz Library</span>
+                <span>Saved Quizzes</span>
+                {savedQuizCount > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-zinc-800 text-amber-400 text-[10px] font-bold font-mono">
+                    {savedQuizCount}
+                  </span>
+                )}
               </button>
+
               <button
                 type="button"
-                onClick={handleSaveCurrentQuiz}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold transition cursor-pointer"
-                title="Save current quiz and locations to library"
+                onClick={() => setIsHistoryOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs font-semibold transition cursor-pointer"
+                title="View previous match history and scorecards"
               >
-                <Save className="w-3.5 h-3.5" />
-                <span>Save Quiz</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleNewBlankQuiz}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200 text-xs font-semibold transition cursor-pointer"
-                title="Start a fresh blank Geo Quiz"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Blank</span>
+                <History className="w-3.5 h-3.5 text-zinc-400" />
+                <span>History</span>
               </button>
             </div>
           </div>
@@ -535,8 +572,13 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
                   <Globe className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-white">GeoGuessr Finale Studio</h1>
-                  <p className="text-xs text-zinc-400">Configure quiz title, 360° panoramas, and launch round</p>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-xl font-bold text-white">Geo Quiz Creator</h1>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                      360° LIVE
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-400">Build a custom quiz with 360° Street Views or generate one with AI</p>
                 </div>
               </div>
 
@@ -544,20 +586,10 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
                 <button
                   type="button"
                   onClick={() => setIsAIGeneratorOpen(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition shadow-lg shadow-amber-500/10 cursor-pointer"
-                  title="Generate complete Geo Quiz with Gemini AI"
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition shadow-sm cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                   <span>AI Generate</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResetToDefaults}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200 text-xs font-semibold hover:bg-zinc-800 transition cursor-pointer"
-                  title="Reset to 5 default curated locations"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Reset to Presets</span>
                 </button>
                 <button
                   type="button"
@@ -565,7 +597,7 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition shadow-lg shadow-amber-500/20 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Add Place</span>
+                  <span>+ Add Place</span>
                 </button>
               </div>
             </div>
@@ -579,150 +611,178 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
                 type="text"
                 value={quizTitle}
                 onChange={(e) => setQuizTitle(e.target.value)}
-                placeholder="e.g. World Wonders Finale, Europe Capitals, Secret Geo..."
+                placeholder="Enter Quiz Title (e.g. World Architecture, Capital Cities, Secret Geo...)"
                 className="flex-1 px-3.5 py-2 rounded-xl bg-zinc-950 border border-zinc-700/80 text-sm font-semibold text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500 transition"
               />
+              {selectedLocations.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleSaveCurrentQuiz}
+                  className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 border border-zinc-700 transition cursor-pointer flex items-center gap-1.5 flex-shrink-0"
+                >
+                  <Save className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Save Quiz</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Locations and Questions Area */}
+          {selectedLocations.length === 0 ? (
+            /* Clean Empty State: No old or sample quiz! */
+            <div className="p-8 sm:p-12 rounded-2xl border-2 border-dashed border-zinc-800 bg-zinc-900/30 text-center flex flex-col items-center justify-center mb-8">
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-3.5">
+                <MapPin className="w-7 h-7" />
+              </div>
+              <h3 className="text-base font-bold text-zinc-100 mb-1">
+                Start Building Your Geo Quiz
+              </h3>
+              <p className="text-xs text-zinc-400 max-w-md mb-6 leading-relaxed">
+                Add 360° locations on the interactive map with trivia clues, or let Gemini AI generate a complete quiz for you.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black text-xs font-bold transition shadow-lg shadow-amber-500/20 cursor-pointer flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>+ Add Question & Location</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsAIGeneratorOpen(true)}
+                  className="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-amber-300 border border-amber-500/40 text-xs font-bold transition cursor-pointer flex items-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span>Generate with AI</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsLibraryOpen(true)}
+                  className="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 text-xs font-semibold transition cursor-pointer flex items-center gap-2"
+                >
+                  <BookOpen className="w-4 h-4 text-zinc-400" />
+                  <span>Load Saved Quiz</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Location list */
+            <div className="space-y-3 mb-8">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">
+                  Locations In Game ({selectedLocations.length})
+                </h3>
+                <span className="text-xs text-zinc-500">
+                  Contestants will guess these in order
+                </span>
+              </div>
+
+              {selectedLocations.map((loc, i) => (
+                <div
+                  key={loc.id || i}
+                  className="flex items-center gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 transition"
+                >
+                  {/* Reorder and Index */}
+                  <div className="flex flex-col items-center gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => handleMoveLocation(i, i - 1)}
+                      disabled={i === 0}
+                      className="p-1 rounded text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-zinc-500 transition cursor-pointer disabled:cursor-not-allowed"
+                      title="Move Question Up"
+                    >
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold bg-amber-500/20 text-amber-300">
+                      {i + 1}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleMoveLocation(i, i + 1)}
+                      disabled={i === selectedLocations.length - 1}
+                      className="p-1 rounded text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-zinc-500 transition cursor-pointer disabled:cursor-not-allowed"
+                      title="Move Question Down"
+                    >
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-zinc-200 truncate">{loc.name}</p>
+                      {loc.googleStreetView && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30">
+                          Street View 360
+                        </span>
+                      )}
+                      {loc.viewpoints && loc.viewpoints.length > 1 && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-semibold border border-blue-500/30 flex items-center gap-1">
+                          <Footprints className="w-2.5 h-2.5" />
+                          {loc.viewpoints.length} Viewpoints
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-zinc-400 line-clamp-1 mt-0.5">
+                      <span className="text-zinc-500 font-medium">Clue:</span> {loc.clue || <span className="italic text-zinc-600">No clue provided</span>}
+                    </p>
+                  </div>
+
+                  <div className="hidden sm:flex flex-col items-end text-right">
+                    <span className="text-xs text-zinc-400 font-mono">
+                      {loc.lat?.toFixed(3)}°, {loc.lon?.toFixed(3)}°
+                    </span>
+                    <span className="text-[11px] text-zinc-500">
+                      ±{loc.toleranceKm || 200} km
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingLocationIndex(i);
+                        setIsEditModalOpen(true);
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-amber-500/20 text-zinc-300 hover:text-amber-300 border border-zinc-700/60 hover:border-amber-500/40 transition cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+                      title="Edit question & location details"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveLocation(i)}
+                      className="p-1.5 rounded-lg hover:bg-red-500/20 text-zinc-500 hover:text-red-400 transition cursor-pointer"
+                      title="Remove question"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {/* Quick Add Card */}
               <button
                 type="button"
-                onClick={handleSaveCurrentQuiz}
-                className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 border border-zinc-700 transition cursor-pointer flex items-center gap-1.5 flex-shrink-0"
+                onClick={() => setIsAddModalOpen(true)}
+                className="w-full p-4 rounded-xl border-2 border-dashed border-zinc-800 hover:border-amber-500/50 hover:bg-zinc-900/30 text-zinc-400 hover:text-amber-300 transition flex items-center justify-center gap-2 text-sm font-semibold cursor-pointer"
               >
-                <Save className="w-3.5 h-3.5 text-amber-400" />
-                <span>Save Title</span>
+                <Plus className="w-4 h-4" />
+                <span>+ Add Another Question & Location</span>
+              </button>
+
+              {/* Launch button */}
+              <button
+                onClick={handleCreateRoom}
+                className="w-full mt-4 py-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-lg hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/20 cursor-pointer flex items-center justify-center gap-3"
+              >
+                <Play className="w-5 h-5" />
+                <span>Create GeoGuessr Room ({selectedLocations.length} Locations)</span>
               </button>
             </div>
-          </div>
-
-          {/* Location list */}
-          <div className="space-y-3 mb-8">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">
-                Locations In Game ({selectedLocations.length})
-              </h3>
-              <span className="text-xs text-zinc-500">
-                Contestants will guess these in order
-              </span>
-            </div>
-
-            {selectedLocations.map((loc, i) => (
-              <div
-                key={loc.id || i}
-                className={`flex items-center gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-xl border transition ${
-                  loc.isCustom
-                    ? 'bg-amber-500/5 border-amber-500/30 hover:border-amber-500/50'
-                    : 'bg-zinc-900/60 border-zinc-800 hover:border-zinc-700'
-                }`}
-              >
-                {/* Reorder and Index */}
-                <div className="flex flex-col items-center gap-0.5">
-                  <button
-                    type="button"
-                    onClick={() => handleMoveLocation(i, i - 1)}
-                    disabled={i === 0}
-                    className="p-1 rounded text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-zinc-500 transition cursor-pointer disabled:cursor-not-allowed"
-                    title="Move Question Up"
-                  >
-                    <ChevronUp className="w-3.5 h-3.5" />
-                  </button>
-                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
-                    loc.isCustom ? 'bg-amber-500/20 text-amber-300' : 'bg-zinc-800 text-zinc-400'
-                  }`}>
-                    {i + 1}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleMoveLocation(i, i + 1)}
-                    disabled={i === selectedLocations.length - 1}
-                    className="p-1 rounded text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-zinc-500 transition cursor-pointer disabled:cursor-not-allowed"
-                    title="Move Question Down"
-                  >
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-semibold text-zinc-200 truncate">{loc.name}</p>
-                    {loc.isCustom ? (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30">
-                        Custom
-                      </span>
-                    ) : (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 font-semibold">
-                        Preset
-                      </span>
-                    )}
-                    {loc.googleStreetView && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30">
-                        Street View 360
-                      </span>
-                    )}
-                    {loc.viewpoints && loc.viewpoints.length > 1 && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-semibold border border-blue-500/30 flex items-center gap-1">
-                        <Footprints className="w-2.5 h-2.5" />
-                        {loc.viewpoints.length} Viewpoints
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-zinc-400 line-clamp-1 mt-0.5">
-                    <span className="text-zinc-500 font-medium">Clue:</span> {loc.clue || <span className="italic text-zinc-600">No clue provided</span>}
-                  </p>
-                </div>
-
-                <div className="hidden sm:flex flex-col items-end text-right">
-                  <span className="text-xs text-zinc-400 font-mono">
-                    {loc.lat?.toFixed(3)}°, {loc.lon?.toFixed(3)}°
-                  </span>
-                  <span className="text-[11px] text-zinc-500">
-                    ±{loc.toleranceKm || 200} km
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingLocationIndex(i);
-                      setIsEditModalOpen(true);
-                    }}
-                    className="px-2.5 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-amber-500/20 text-zinc-300 hover:text-amber-300 border border-zinc-700/60 hover:border-amber-500/40 transition cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
-                    title="Edit question & location details"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Edit</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveLocation(i)}
-                    className="p-1.5 rounded-lg hover:bg-red-500/20 text-zinc-500 hover:text-red-400 transition cursor-pointer"
-                    title="Remove question"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            {/* Quick Add Card when empty or host wants to add */}
-            <button
-              type="button"
-              onClick={() => setIsAddModalOpen(true)}
-              className="w-full p-4 rounded-xl border-2 border-dashed border-zinc-800 hover:border-amber-500/50 hover:bg-zinc-900/30 text-zinc-400 hover:text-amber-300 transition flex items-center justify-center gap-2 text-sm font-semibold cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ Add Another Custom Location</span>
-            </button>
-          </div>
-
-          {/* Launch button */}
-          <button
-            onClick={handleCreateRoom}
-            disabled={selectedLocations.length === 0}
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-lg hover:from-amber-400 hover:to-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-amber-500/20 cursor-pointer flex items-center justify-center gap-3"
-          >
-            <Play className="w-5 h-5" />
-            Create GeoGuessr Room ({selectedLocations.length} Locations)
-          </button>
+          )}
         </div>
 
         {/* Geo Quiz Library Modal */}

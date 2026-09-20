@@ -470,9 +470,8 @@ export async function fetchSavedGeoQuizzes() {
   }
 
   const map = new Map();
-  DEFAULT_GEO_QUIZZES.forEach(q => map.set(q.id, q));
   [...localList, ...firebaseList].forEach(q => {
-    if (q && q.id) map.set(q.id, q);
+    if (q && q.id && !q.isPreset) map.set(q.id, q);
   });
 
   return Array.from(map.values()).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
