@@ -134,3 +134,114 @@ html, body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.7);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   GeoGuessr — Stage & Buzzer Fullscreen Styles
+   ═══════════════════════════════════════════════════════════════ */
+
+.geo-stage-fullscreen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  cursor: default;
+  z-index: 50;
+  background: #09090b;
+}
+
+.geo-buzzer-fullscreen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  z-index: 50;
+}
+
+/* Animated geodesic reveal line (dashed, stroke-dash animation) */
+.geo-reveal-line {
+  stroke-dasharray: 8, 12;
+  animation: geodesic-draw 1.5s linear forwards;
+}
+
+@keyframes geodesic-draw {
+  from { stroke-dashoffset: 200; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* Floating score animation */
+.geo-score-float {
+  animation: score-float 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes score-float {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.8);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-20px) scale(1);
+  }
+}
+
+/* Buzzer pulse ring (larger, slower for mobile) */
+@keyframes buzzer-pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
+  70% { transform: scale(1.02); box-shadow: 0 0 0 20px rgba(245, 158, 11, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+/* Leaflet custom overrides for dark theme */
+.leaflet-container {
+  background: #09090b !important;
+}
+.leaflet-control-attribution {
+  background: rgba(9, 9, 11, 0.7) !important;
+  color: #52525b !important;
+  font-size: 9px !important;
+}
+.leaflet-control-attribution a {
+  color: #71717a !important;
+}
+
+/* Pannellum overrides */
+.pnlm-container {
+  background: #09090b !important;
+}
+.pnlm-load-box {
+  background: transparent !important;
+}
+.pnlm-load-box p {
+  color: #52525b !important;
+}
+
+/* Hide Pannellum controls on stage */
+.geo-stage-fullscreen .pnlm-controls-container {
+  display: none !important;
+}
+
+/* Custom geo marker pulse */
+.geo-custom-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Animated CSS panorama pan fallback */
+.animate-pan-panorama {
+  animation: pan-panorama 45s ease-in-out infinite alternate;
+}
+
+@keyframes pan-panorama {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+

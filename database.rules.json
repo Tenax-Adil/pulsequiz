@@ -4,6 +4,10 @@
       ".read": true,
       ".write": true
     },
+    "geo_rooms": {
+      ".read": true,
+      ".write": true
+    },
     "saved_quizzes": {
       ".read": true,
       ".write": true
@@ -14,3 +18,4 @@
     }
   }
 }
+

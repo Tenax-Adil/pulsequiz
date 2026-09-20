@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Key, Database, Cloud, Check, Sparkles, Lock } from 'lucide-react';
+import { X, Key, Database, Cloud, Check, Sparkles, Lock, Globe } from 'lucide-react';
 import { isFirebaseLive } from '../../services/firebase.js';
 import { Button } from '../ui/button.jsx';
 import { Input } from '../ui/input.jsx';
@@ -13,6 +13,7 @@ export function ConfigModal({ isOpen, onClose }) {
   const [imgbbKey, setImgbbKey] = useState('');
   const [cloudinaryCloud, setCloudinaryCloud] = useState('');
   const [cloudinaryPreset, setCloudinaryPreset] = useState('');
+  const [googleMapsKey, setGoogleMapsKey] = useState('');
   const [hostPassword, setHostPassword] = useState('admin123');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -20,6 +21,7 @@ export function ConfigModal({ isOpen, onClose }) {
     if (!isOpen) return;
 
     setGeminiKey(localStorage.getItem('pulse_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY || '');
+    setGoogleMapsKey(localStorage.getItem('pulse_google_maps_key') || import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '');
     setImgbbKey(localStorage.getItem('pulse_imgbb_api_key') || import.meta.env.VITE_IMGBB_API_KEY || '');
     setCloudinaryCloud(localStorage.getItem('pulse_cloudinary_cloud') || import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || '');
     setCloudinaryPreset(localStorage.getItem('pulse_cloudinary_preset') || import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '');
@@ -42,6 +44,12 @@ export function ConfigModal({ isOpen, onClose }) {
       localStorage.setItem('pulse_gemini_key', geminiKey.trim());
     } else {
       localStorage.removeItem('pulse_gemini_key');
+    }
+
+    if (googleMapsKey.trim()) {
+      localStorage.setItem('pulse_google_maps_key', googleMapsKey.trim());
+    } else {
+      localStorage.removeItem('pulse_google_maps_key');
     }
 
     if (imgbbKey.trim()) {
@@ -221,6 +229,33 @@ export function ConfigModal({ isOpen, onClose }) {
             />
             <span className="text-[11px] text-zinc-500 block mt-1">
               Preserves 100% full original resolution and exact aspect ratio on high-speed CDN.
+            </span>
+          </div>
+
+          {/* Section: Google Maps 360 Street View */}
+          <div className="bg-zinc-950/60 p-3.5 rounded-xl border border-zinc-800/80">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-amber-400" /> Google Maps API Key (GeoGuessr 360)
+              </label>
+              <a
+                href="https://console.cloud.google.com/google/maps-apis/credentials"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] text-amber-400 hover:text-amber-300 underline"
+              >
+                Get Free Key
+              </a>
+            </div>
+            <Input
+              type="password"
+              placeholder="Paste AIzaSy... key (Maps Embed API)"
+              value={googleMapsKey}
+              onChange={(e) => setGoogleMapsKey(e.target.value)}
+              className="h-9 font-mono text-xs"
+            />
+            <span className="text-[11px] text-zinc-500 block mt-1">
+              Enables native Google 360 Street View by clicking on map. Maps Embed API is 100% free with unlimited calls.
             </span>
           </div>
 

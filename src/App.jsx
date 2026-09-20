@@ -26,9 +26,51 @@ import { Lock } from 'lucide-react';
 import { AIGeneratorModal } from './components/Host/AIGeneratorModal.jsx';
 import { HostAuthModal } from './components/Host/HostAuthModal.jsx';
 
+// ─── GeoGuessr Imports ──────────────────────────────────────
+import { GeoStageView } from './components/GeoGuessr/GeoStageView.jsx';
+import { GeoHostDashboard } from './components/GeoGuessr/GeoHostDashboard.jsx';
+import { GeoBuzzerView } from './components/GeoGuessr/GeoBuzzerView.jsx';
+import { getGeoRoom, joinGeoRoom } from './services/geoFirebase.js';
+
+
+// ─── Hash-based route parser for GeoGuessr views ────────────
+function parseGeoHash(hash) {
+  if (!hash || !hash.startsWith('#/')) return null;
+  const [path, query] = hash.substring(2).split('?');
+  const params = new URLSearchParams(query || '');
+  const code = params.get('code') || '';
+  if (path === 'stage/geoguessr') return { view: 'geo-stage', code };
+  if (path === 'host/geoguessr') return { view: 'geo-host', code };
+  if (path === 'player/buzzer') return { view: 'geo-buzzer', code };
+  return null;
+}
+
 export function App() {
+  // ─── GeoGuessr Hash Route Detection ──────────────────────
+  const [geoRoute, setGeoRoute] = useState(() => parseGeoHash(window.location.hash));
+
+  useEffect(() => {
+    const handler = () => {
+      setGeoRoute(parseGeoHash(window.location.hash));
+      const hash = window.location.hash;
+      if (hash === '#/host' || hash === '#host') {
+        if (sessionStorage.getItem('pulse_host_auth') === 'true') {
+          setIsHostAuthenticated(true);
+          setNavRole('host');
+          setHostMode('dashboard');
+        } else {
+          setShowHostAuthModal(true);
+        }
+      }
+    };
+    window.addEventListener('hashchange', handler);
+    return () => window.removeEventListener('hashchange', handler);
+  }, []);
+
+  // ─── Normal Quiz App ────────────────────────────────────
   // Navigation: 'host' | 'student'
   const [navRole, setNavRole] = useState('student');
+
 
   // Host security & authentication
   const [isHostAuthenticated, setIsHostAuthenticated] = useState(() => {
@@ -87,7 +129,8 @@ export function App() {
       params.get('host') === 'true' ||
       params.get('host') === '1' ||
       window.location.pathname.includes('/host') ||
-      window.location.hash === '#host';
+      window.location.hash === '#host' ||
+      window.location.hash === '#/host';
 
     if (hostRequested) {
       if (sessionStorage.getItem('pulse_host_auth') === 'true') {
@@ -248,7 +291,32 @@ export function App() {
   // -------------------------------------------------------------
   // STUDENT ACTIONS
   // -------------------------------------------------------------
-  const handleStudentJoin = async ({ roomCode, nickname, avatar }) => {
+  const handleStudentJoin = async ({ roomCode, nickname, avatar, quizType }) => {
+    // 1. Check if this is a GeoGuessr room PIN or requested as Geo quiz
+    try {
+      const geoRoom = await getGeoRoom(roomCode);
+      if (geoRoom || quizType === 'geo') {
+        const geoId = `geo_p_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        try {
+          localStorage.setItem('pulse_geo_player', JSON.stringify({
+            id: geoId,
+            nickname: nickname.trim(),
+            avatar,
+            roomCode,
+          }));
+          await joinGeoRoom(roomCode, {
+            id: geoId,
+            nickname: nickname.trim(),
+            avatar,
+          });
+        } catch { /* ignore */ }
+        window.location.hash = `#/player/buzzer?code=${roomCode}`;
+        return;
+      }
+    } catch (err) {
+      console.warn('GeoGuessr check error, falling back to standard room:', err);
+    }
+
     const pId = `p_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const playerObj = {
       id: pId,
@@ -276,6 +344,7 @@ export function App() {
     }
   };
 
+
   const handleStudentReconnect = (session) => {
     setStudentPlayer(session);
     setStudentRoomCode(session.roomCode);
@@ -300,7 +369,23 @@ export function App() {
     setSavedSession(null);
   };
 
+  // If a GeoGuessr hash route is active, render only that view (full-screen, no navbar)
+  // Rendered here so all Hooks are called in the exact same order on every render (Rules of Hooks)
+  if (geoRoute) {
+    switch (geoRoute.view) {
+      case 'geo-stage':
+        return <GeoStageView roomCode={geoRoute.code} />;
+      case 'geo-host':
+        return <GeoHostDashboard roomCode={geoRoute.code} />;
+      case 'geo-buzzer':
+        return <GeoBuzzerView roomCode={geoRoute.code} />;
+      default:
+        break;
+    }
+  }
+
   return (
+
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-zinc-800 selection:text-zinc-100">
       <Navbar
         currentView={navRole}
@@ -400,9 +485,15 @@ export function App() {
                 <h3 className="text-lg font-semibold text-zinc-200 mb-1">
                   Connecting to Game Room...
                 </h3>
-                <p className="text-xs text-zinc-500 font-mono">
+                <p className="text-xs text-zinc-500 font-mono mb-4">
                   PIN: {studentRoomCode}
                 </p>
+                <button
+                  onClick={handleStudentLeave}
+                  className="text-xs text-zinc-500 hover:text-zinc-300 underline cursor-pointer"
+                >
+                  Cancel / Join different PIN
+                </button>
               </div>
             ) : (
               <>
@@ -436,8 +527,32 @@ export function App() {
                     onLeave={handleStudentLeave}
                   />
                 )}
+
+                {/* GeoGuessr status handler for live mobile buzzer */}
+                {(room.status?.startsWith('GEO_') || ['PANORAMA', 'HOST_MIRROR', 'BUZZER_LOCKED', 'REVEAL', 'ROUND_WRAP'].includes(room.status)) && (
+                  <GeoBuzzerView roomCode={studentRoomCode} />
+                )}
+
+                {/* Robust fallback so player view is NEVER a blank/black void */}
+                {!['LOBBY', 'QUESTION_ACTIVE', 'QUESTION_LEADERBOARD', 'FINISHED'].includes(room.status) &&
+                 !room.status?.startsWith('GEO_') &&
+                 !['PANORAMA', 'HOST_MIRROR', 'BUZZER_LOCKED', 'REVEAL', 'ROUND_WRAP'].includes(room.status) && (
+                  <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                    <div className="max-w-xs w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl text-center">
+                      <p className="text-zinc-300 font-semibold mb-1">Room Connected</p>
+                      <p className="text-zinc-500 text-xs font-mono mb-4">{room.status || 'Active'}</p>
+                      <button
+                        onClick={handleStudentLeave}
+                        className="w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-lg transition cursor-pointer"
+                      >
+                        Exit to Home
+                      </button>
+                    </div>
+                  </div>
+                )}
               </>
             )}
+
           </>
         )}
       </main>

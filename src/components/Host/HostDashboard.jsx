@@ -10,11 +10,14 @@ import {
   Calendar,
   Layers,
   Sparkles,
-  ArrowUpRight
+  ArrowUpRight,
+  Globe,
+  MapPin,
 } from 'lucide-react';
 import { AIGeneratorModal } from './AIGeneratorModal.jsx';
 import { QuizHistoryModal } from './QuizHistoryModal.jsx';
 import { fetchSavedQuizzes, deleteSavedQuiz, fetchGameHistory } from '../../services/firebase.js';
+import { fetchSavedGeoQuizzes } from '../../services/geoFirebase.js';
 import { Button } from '../ui/button.jsx';
 import { Badge } from '../ui/badge.jsx';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '../ui/card.jsx';
@@ -23,18 +26,21 @@ export function HostDashboard({ onStartRoom, onEditQuiz }) {
   const [showAIModal, setShowAIModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [savedQuizzes, setSavedQuizzes] = useState([]);
+  const [savedGeoQuizzes, setSavedGeoQuizzes] = useState([]);
   const [gameHistory, setGameHistory] = useState([]);
   const [loadingLibrary, setLoadingLibrary] = useState(true);
 
   const loadData = async () => {
     setLoadingLibrary(true);
     try {
-      const [quizzes, history] = await Promise.all([
+      const [quizzes, history, geoQuizzes] = await Promise.all([
         fetchSavedQuizzes(),
-        fetchGameHistory()
+        fetchGameHistory(),
+        fetchSavedGeoQuizzes().catch(() => [])
       ]);
       setSavedQuizzes(quizzes || []);
       setGameHistory(history || []);
+      setSavedGeoQuizzes(geoQuizzes || []);
     } catch (err) {
       console.warn('Error loading host dashboard data:', err);
     } finally {
@@ -131,6 +137,49 @@ export function HostDashboard({ onStartRoom, onEditQuiz }) {
             <Sparkles className="w-4 h-4 text-zinc-900" />
             <span>AI Generate</span>
           </Button>
+        </div>
+      </div>
+
+      {/* ═══ GeoGuessr Finale Card ═══════════════════════════ */}
+      <div className="mb-8">
+        <div
+          onClick={() => { window.location.hash = '#/host/geoguessr'; }}
+          className="group relative overflow-hidden rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-zinc-900/80 to-zinc-900/80 p-6 cursor-pointer hover:border-amber-500/40 transition-all hover:shadow-lg hover:shadow-amber-500/10"
+        >
+          <div className="absolute top-4 right-4 opacity-[0.06] pointer-events-none">
+            <Globe className="w-32 h-32" />
+          </div>
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/20">
+                <MapPin className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-white">
+                    GeoGuessr Finale Studio
+                  </h3>
+                  <Badge variant="outline" className="border-amber-500/30 text-amber-400 text-[10px] font-bold">
+                    360° LIVE
+                  </Badge>
+                  {savedGeoQuizzes.length > 0 && (
+                    <Badge variant="secondary" className="bg-zinc-800 text-zinc-300 text-[10px] border-zinc-700">
+                      {savedGeoQuizzes.length} Geo Quizzes
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-zinc-400 mt-0.5">
+                  Launch 360° street view rounds, create & save custom geo quizzes, mirror physical contestant tags, and score in real time.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="text-xs font-semibold text-amber-400 group-hover:text-amber-300 transition flex items-center gap-1">
+                <span>Open Studio</span>
+                <ArrowUpRight className="w-4 h-4" />
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
