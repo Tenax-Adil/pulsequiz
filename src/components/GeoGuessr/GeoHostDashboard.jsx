@@ -12,7 +12,7 @@ import {
   RotateCcw, Map as MapIcon, Crosshair, Trophy,
   ArrowRight, Copy, ExternalLink, Eye, EyeOff, Plus,
   Footprints, RefreshCw, Save, BookOpen, LogOut, ArrowLeft,
-  History, Sparkles
+  History, Sparkles, Edit3, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { GeoAddLocationModal } from './GeoAddLocationModal.jsx';
 import { GeoQuizLibraryModal } from './GeoQuizLibraryModal.jsx';
@@ -49,6 +49,8 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
   const [hostPanoMode, setHostPanoMode] = useState(true);
   const [hostPeek, setHostPeek] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingLocationIndex, setEditingLocationIndex] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     if (initialRoomCode) {
@@ -96,6 +98,35 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
         localStorage.setItem('pulse_custom_geo_locations', JSON.stringify(customs));
       } catch { /* ignore */ }
       return updated;
+    });
+  };
+
+  const handleUpdateLocation = (updatedLoc) => {
+    if (editingLocationIndex === null || editingLocationIndex < 0) return;
+    setSelectedLocations(prev => {
+      const updated = [...prev];
+      updated[editingLocationIndex] = updatedLoc;
+      try {
+        const customs = updated.filter(l => l.isCustom);
+        localStorage.setItem('pulse_custom_geo_locations', JSON.stringify(customs));
+      } catch { /* ignore */ }
+      return updated;
+    });
+    setEditingLocationIndex(null);
+    setIsEditModalOpen(false);
+  };
+
+  const handleMoveLocation = (fromIdx, toIdx) => {
+    setSelectedLocations(prev => {
+      if (toIdx < 0 || toIdx >= prev.length) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      try {
+        const customs = next.filter(l => l.isCustom);
+        localStorage.setItem('pulse_custom_geo_locations', JSON.stringify(customs));
+      } catch { /* ignore */ }
+      return next;
     });
   };
 
@@ -576,19 +607,41 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
             {selectedLocations.map((loc, i) => (
               <div
                 key={loc.id || i}
-                className={`flex items-center gap-4 p-4 rounded-xl border transition ${
+                className={`flex items-center gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-xl border transition ${
                   loc.isCustom
                     ? 'bg-amber-500/5 border-amber-500/30 hover:border-amber-500/50'
                     : 'bg-zinc-900/60 border-zinc-800 hover:border-zinc-700'
                 }`}
               >
-                <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
-                  loc.isCustom ? 'bg-amber-500/20 text-amber-300' : 'bg-zinc-800 text-zinc-400'
-                }`}>
-                  {i + 1}
-                </span>
+                {/* Reorder and Index */}
+                <div className="flex flex-col items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => handleMoveLocation(i, i - 1)}
+                    disabled={i === 0}
+                    className="p-1 rounded text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-zinc-500 transition cursor-pointer disabled:cursor-not-allowed"
+                    title="Move Question Up"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </button>
+                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
+                    loc.isCustom ? 'bg-amber-500/20 text-amber-300' : 'bg-zinc-800 text-zinc-400'
+                  }`}>
+                    {i + 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleMoveLocation(i, i + 1)}
+                    disabled={i === selectedLocations.length - 1}
+                    className="p-1 rounded text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-zinc-500 transition cursor-pointer disabled:cursor-not-allowed"
+                    title="Move Question Down"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-semibold text-zinc-200 truncate">{loc.name}</p>
                     {loc.isCustom ? (
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30">
@@ -599,6 +652,11 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
                         Preset
                       </span>
                     )}
+                    {loc.googleStreetView && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30">
+                        Street View 360
+                      </span>
+                    )}
                     {loc.viewpoints && loc.viewpoints.length > 1 && (
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-semibold border border-blue-500/30 flex items-center gap-1">
                         <Footprints className="w-2.5 h-2.5" />
@@ -606,22 +664,42 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-zinc-500 truncate mt-0.5">{loc.clue || 'No clue provided'}</p>
+                  <p className="text-xs text-zinc-400 line-clamp-1 mt-0.5">
+                    <span className="text-zinc-500 font-medium">Clue:</span> {loc.clue || <span className="italic text-zinc-600">No clue provided</span>}
+                  </p>
                 </div>
-                <span className="text-xs text-zinc-600 font-mono">
-                  {loc.lat?.toFixed(2)}°, {loc.lon?.toFixed(2)}°
-                </span>
-                <span className="text-xs text-zinc-600">
-                  ±{loc.toleranceKm || 200}km
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveLocation(i)}
-                  className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-red-400 transition cursor-pointer"
-                  title="Remove location"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+
+                <div className="hidden sm:flex flex-col items-end text-right">
+                  <span className="text-xs text-zinc-400 font-mono">
+                    {loc.lat?.toFixed(3)}°, {loc.lon?.toFixed(3)}°
+                  </span>
+                  <span className="text-[11px] text-zinc-500">
+                    ±{loc.toleranceKm || 200} km
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingLocationIndex(i);
+                      setIsEditModalOpen(true);
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-amber-500/20 text-zinc-300 hover:text-amber-300 border border-zinc-700/60 hover:border-amber-500/40 transition cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+                    title="Edit question & location details"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Edit</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveLocation(i)}
+                    className="p-1.5 rounded-lg hover:bg-red-500/20 text-zinc-500 hover:text-red-400 transition cursor-pointer"
+                    title="Remove question"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))}
 
@@ -660,6 +738,17 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
           onAddLocation={handleAddCustomLocation}
+        />
+
+        {/* Edit Location Modal */}
+        <GeoAddLocationModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingLocationIndex(null);
+          }}
+          editLocation={editingLocationIndex !== null ? selectedLocations[editingLocationIndex] : null}
+          onUpdateLocation={handleUpdateLocation}
         />
 
         {/* Geo History Modal */}

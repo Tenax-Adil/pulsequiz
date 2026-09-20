@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   X, MapPin, Upload, AlertCircle,
   Plus, Compass, Key, Sparkles,
-  ExternalLink, Search, Landmark, Loader2, CheckCircle2
+  ExternalLink, Search, Landmark, Loader2, CheckCircle2,
+  Edit3, Check
 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -62,7 +63,13 @@ const POPULAR_360_SPOTS = [
   { label: '🌊 Marine Drive', name: 'Marine Drive, Mumbai, India', lat: 18.9438, lon: 72.8234 },
 ];
 
-export function GeoAddLocationModal({ isOpen, onClose, onAddLocation }) {
+export function GeoAddLocationModal({
+  isOpen,
+  onClose,
+  onAddLocation,
+  editLocation = null,
+  onUpdateLocation = null,
+}) {
   // Mode selection: 'google' | 'curated' | 'custom'
   const [activeTab, setActiveTab] = useState('google');
 
@@ -104,6 +111,35 @@ export function GeoAddLocationModal({ isOpen, onClose, onAddLocation }) {
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Sync state when editLocation or isOpen changes
+  useEffect(() => {
+    if (isOpen && editLocation) {
+      setName(editLocation.name || '');
+      setClue(editLocation.clue || '');
+      setLat(editLocation.lat != null ? editLocation.lat.toString() : '');
+      setLon(editLocation.lon != null ? editLocation.lon.toString() : '');
+      setToleranceKm(editLocation.toleranceKm || 150);
+      setPreviewUrl(editLocation.panoramaUrl || '');
+      setCustomUrl(editLocation.panoramaUrl || '');
+      setErrorMsg('');
+      if (editLocation.type === 'custom' || (editLocation.panoramaUrl && !editLocation.googleStreetView && !editLocation.type)) {
+        setActiveTab('custom');
+      } else {
+        setActiveTab('google');
+      }
+    } else if (isOpen && !editLocation) {
+      setName('');
+      setClue('');
+      setLat('');
+      setLon('');
+      setToleranceKm(150);
+      setCustomUrl('');
+      setPreviewUrl('');
+      setErrorMsg('');
+      setActiveTab('google');
+    }
+  }, [isOpen, editLocation]);
 
   // Mini Map refs
   const mapContainerRef = useRef(null);
@@ -366,9 +402,13 @@ export function GeoAddLocationModal({ isOpen, onClose, onAddLocation }) {
         mapRef.current = null;
       }
 
+      const targetLat = editLocation && editLocation.lat != null ? Number(editLocation.lat) : (parseFloat(lat) || null);
+      const targetLon = editLocation && editLocation.lon != null ? Number(editLocation.lon) : (parseFloat(lon) || null);
+      const hasInitialCoords = targetLat != null && targetLon != null && !isNaN(targetLat) && !isNaN(targetLon);
+
       const map = L.map(mapContainerRef.current, {
-        center: [20, 0],
-        zoom: 2,
+        center: hasInitialCoords ? [targetLat, targetLon] : [20, 0],
+        zoom: hasInitialCoords ? 12 : 2,
         minZoom: 1,
         maxZoom: 16,
         zoomControl: true,
@@ -377,6 +417,10 @@ export function GeoAddLocationModal({ isOpen, onClose, onAddLocation }) {
 
       L.tileLayer(ESRI_BASE_URL, { maxZoom: 16, crossOrigin: true }).addTo(map);
       L.tileLayer(ESRI_REF_URL, { maxZoom: 16, crossOrigin: true, opacity: 0.85 }).addTo(map);
+
+      if (hasInitialCoords) {
+        userMarkerRef.current = L.marker([targetLat, targetLon], { icon: PICKER_PIN_ICON }).addTo(map);
+      }
 
       // Handle map click to drop pin & update lat/lon
       map.on('click', (e) => {
@@ -421,7 +465,7 @@ export function GeoAddLocationModal({ isOpen, onClose, onAddLocation }) {
       userMarkerRef.current = null;
       landmarkMarkersRef.current = [];
     };
-  }, [isOpen, handleSelectLandmark, reverseGeocode]);
+  }, [isOpen, editLocation, handleSelectLandmark, reverseGeocode]);
 
   // Sync marker when manual lat/lon changes
   useEffect(() => {
@@ -494,13 +538,13 @@ export function GeoAddLocationModal({ isOpen, onClose, onAddLocation }) {
     }
 
     let finalLocation = {
-      id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      id: editLocation?.id || `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       name: name.trim(),
       clue: clue.trim(),
       lat: parsedLat,
       lon: parsedLon,
       toleranceKm: Number(toleranceKm) || 150,
-      isCustom: true,
+      isCustom: editLocation ? editLocation.isCustom : true,
     };
 
     if (activeTab === 'google') {
@@ -523,7 +567,11 @@ export function GeoAddLocationModal({ isOpen, onClose, onAddLocation }) {
       }
     }
 
-    onAddLocation(finalLocation);
+    if (editLocation && onUpdateLocation) {
+      onUpdateLocation(finalLocation);
+    } else if (onAddLocation) {
+      onAddLocation(finalLocation);
+    }
     onClose();
   };
 
@@ -536,11 +584,15 @@ export function GeoAddLocationModal({ isOpen, onClose, onAddLocation }) {
         <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/90">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-              <Compass className="w-5 h-5" />
+              {editLocation ? <Edit3 className="w-5 h-5" /> : <Compass className="w-5 h-5" />}
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">Add 360° Location</h2>
-              <p className="text-xs text-zinc-400">Add Google Street View, curated landmarks, or 360 images</p>
+              <h2 className="text-base font-bold text-white">
+                {editLocation ? 'Edit Geo Question & Location' : 'Add 360° Location'}
+              </h2>
+              <p className="text-xs text-zinc-400">
+                {editLocation ? 'Update clue, coordinates, scoring tolerance, or 360° panorama' : 'Add Google Street View, curated landmarks, or 360 images'}
+              </p>
             </div>
           </div>
           <button
@@ -969,8 +1021,8 @@ export function GeoAddLocationModal({ isOpen, onClose, onAddLocation }) {
             disabled={isProcessingImage}
             className="px-6 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-sm hover:from-amber-400 hover:to-orange-400 transition shadow-lg shadow-amber-500/20 cursor-pointer flex items-center gap-2"
           >
-            <Plus className="w-4 h-4" />
-            <span>Add Location</span>
+            {editLocation ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            <span>{editLocation ? 'Save Changes' : 'Add Location'}</span>
           </button>
         </div>
       </div>
