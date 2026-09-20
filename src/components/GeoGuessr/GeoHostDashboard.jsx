@@ -12,11 +12,12 @@ import {
   RotateCcw, Map as MapIcon, Crosshair, Trophy,
   ArrowRight, Copy, ExternalLink, Eye, EyeOff, Plus,
   Footprints, RefreshCw, Save, BookOpen, LogOut, ArrowLeft,
-  History
+  History, Sparkles
 } from 'lucide-react';
 import { GeoAddLocationModal } from './GeoAddLocationModal.jsx';
 import { GeoQuizLibraryModal } from './GeoQuizLibraryModal.jsx';
 import { GeoHistoryModal } from './GeoHistoryModal.jsx';
+import { GeoAIGeneratorModal } from './GeoAIGeneratorModal.jsx';
 
 /**
  * GeoGuessr Host Control Dashboard
@@ -29,6 +30,7 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
   const [currentQuizId, setCurrentQuizId] = useState(null);
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isAIGeneratorOpen, setIsAIGeneratorOpen] = useState(false);
   const [saveNotification, setSaveNotification] = useState('');
   const recordedGeoHistoryRef = useRef(new Set());
 
@@ -152,6 +154,17 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
     setQuizTitle('New Custom Geo Quiz');
     setSelectedLocations([]);
     setCurrentQuizId(null);
+  };
+
+  const handleAIGeneratedGeoQuiz = ({ title, locations }) => {
+    setQuizTitle(title);
+    setSelectedLocations(locations);
+    setCurrentQuizId(null);
+    try {
+      localStorage.setItem('pulse_custom_geo_locations', JSON.stringify(locations));
+    } catch { /* ignore */ }
+    setSaveNotification(`✨ AI generated "${title}" with ${locations.length} locations!`);
+    soundFx.playSelect();
   };
 
   // ─── AUTO-RECORD MATCH HISTORY ────────────────────────────
@@ -424,6 +437,15 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
             <div className="flex items-center gap-2">
               <button
                 type="button"
+                onClick={() => setIsAIGeneratorOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold transition cursor-pointer"
+                title="Generate custom Geo Quiz using Gemini AI"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>AI Generator</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setIsHistoryOpen(true)}
                 className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs font-semibold transition cursor-pointer"
                 title="View previous GeoGuessr match history and scorecards"
@@ -488,6 +510,15 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAIGeneratorOpen(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition shadow-lg shadow-amber-500/10 cursor-pointer"
+                  title="Generate complete Geo Quiz with Gemini AI"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>AI Generate</span>
+                </button>
                 <button
                   type="button"
                   onClick={handleResetToDefaults}
@@ -635,6 +666,13 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
         <GeoHistoryModal
           isOpen={isHistoryOpen}
           onClose={() => setIsHistoryOpen(false)}
+        />
+
+        {/* Geo AI Generator Modal */}
+        <GeoAIGeneratorModal
+          isOpen={isAIGeneratorOpen}
+          onClose={() => setIsAIGeneratorOpen(false)}
+          onGenerated={handleAIGeneratedGeoQuiz}
         />
       </div>
     );
