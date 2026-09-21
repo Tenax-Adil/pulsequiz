@@ -38,10 +38,66 @@ function parseGeoHash(hash) {
   if (!hash || !hash.startsWith('#/')) return null;
   const [path, query] = hash.substring(2).split('?');
   const params = new URLSearchParams(query || '');
-  const code = params.get('code') || '';
+  let code = params.get('code') || '';
   if (path === 'stage/geoguessr') return { view: 'geo-stage', code };
-  if (path === 'host/geoguessr') return { view: 'geo-host', code };
+  if (path === 'host/geoguessr') {
+    // If no code in query params, check saved Geo host session
+    if (!code) {
+      try {
+        const saved = sessionStorage.getItem('pulse_geo_host_session') || localStorage.getItem('pulse_geo_host_session');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.roomCode && (Date.now() - (parsed.timestamp || 0) < 12 * 60 * 60 * 1000)) {
+            code = parsed.roomCode;
+          }
+        }
+      } catch { /* ignore */ }
+    }
+    return { view: 'geo-host', code };
+  }
   if (path === 'player/buzzer') return { view: 'geo-buzzer', code };
+  return null;
+}
+
+// ─── Host Session Persistence Helpers ───────────────────────
+function getSavedHostSession() {
+  try {
+    const raw = sessionStorage.getItem('pulse_host_session') || localStorage.getItem('pulse_host_session');
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data?.roomCode) return null;
+    // Session is valid for up to 12 hours
+    if (Date.now() - (data.timestamp || 0) > 12 * 60 * 60 * 1000) {
+      sessionStorage.removeItem('pulse_host_session');
+      localStorage.removeItem('pulse_host_session');
+      return null;
+    }
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function getHostCodeFromUrl() {
+  try {
+    // 1. Check window.location.search (?hostCode=... or ?host=true&code=...)
+    const searchParams = new URLSearchParams(window.location.search);
+    const codeParam = searchParams.get('hostCode') || (searchParams.get('host') === 'true' && searchParams.get('code'));
+    if (codeParam) return codeParam.trim();
+
+    // 2. Check window.location.hash (#/host?code=... or #host?code=...)
+    const hash = window.location.hash;
+    if (hash && (hash.startsWith('#/host') || hash.startsWith('#host')) && !hash.startsWith('#/host/geoguessr')) {
+      const qIndex = hash.indexOf('?');
+      if (qIndex !== -1) {
+        const hashParams = new URLSearchParams(hash.substring(qIndex + 1));
+        const c = hashParams.get('code');
+        if (c) return c.trim();
+      }
+    }
+  } catch {
+    // ignore
+  }
   return null;
 }
 
@@ -49,15 +105,71 @@ export function App() {
   // ─── GeoGuessr Hash Route Detection ──────────────────────
   const [geoRoute, setGeoRoute] = useState(() => parseGeoHash(window.location.hash));
 
+  // Check saved host session
+  const initialHostSession = getSavedHostSession();
+  const initialHostCode = getHostCodeFromUrl() || initialHostSession?.roomCode || null;
+  const hasActiveHostSession = Boolean(initialHostCode);
+
+  // Navigation: 'host' | 'student'
+  const [navRole, setNavRole] = useState(() => (hasActiveHostSession ? 'host' : 'student'));
+
+  // Host security & authentication
+  const [isHostAuthenticated, setIsHostAuthenticated] = useState(() => {
+    try {
+      if (hasActiveHostSession) {
+        sessionStorage.setItem('pulse_host_auth', 'true');
+        return true;
+      }
+      return sessionStorage.getItem('pulse_host_auth') === 'true';
+    } catch {
+      return hasActiveHostSession;
+    }
+  });
+  const [showHostAuthModal, setShowHostAuthModal] = useState(false);
+
+  // Host sub-state: 'dashboard' | 'editor' | 'live'
+  const [hostMode, setHostMode] = useState(() => (hasActiveHostSession ? 'live' : 'dashboard'));
+  const [activeHostQuiz, setActiveHostQuiz] = useState(null);
+  const [hostRoomCode, setHostRoomCode] = useState(() => initialHostCode);
+  const [showAIModal, setShowAIModal] = useState(false);
+  const recordedRoomsRef = useRef(new Set());
+
+  // Keep host session in storage and URL updated while hosting
+  useEffect(() => {
+    if (hostRoomCode && hostMode === 'live') {
+      const sessionData = {
+        roomCode: hostRoomCode,
+        mode: 'live',
+        timestamp: Date.now(),
+      };
+      try {
+        sessionStorage.setItem('pulse_host_session', JSON.stringify(sessionData));
+        localStorage.setItem('pulse_host_session', JSON.stringify(sessionData));
+        sessionStorage.setItem('pulse_host_auth', 'true');
+      } catch { /* ignore */ }
+
+      const targetHash = `#/host?code=${hostRoomCode}`;
+      if (window.location.hash !== targetHash && !window.location.hash.startsWith('#/host/geoguessr')) {
+        window.history.replaceState(null, '', targetHash);
+      }
+    }
+  }, [hostRoomCode, hostMode]);
+
   useEffect(() => {
     const handler = () => {
       setGeoRoute(parseGeoHash(window.location.hash));
       const hash = window.location.hash;
-      if (hash === '#/host' || hash === '#host') {
-        if (sessionStorage.getItem('pulse_host_auth') === 'true') {
+      if (hash.startsWith('#/host') || hash.startsWith('#host')) {
+        if (hash.startsWith('#/host/geoguessr')) return;
+
+        const codeInHash = getHostCodeFromUrl();
+        if (sessionStorage.getItem('pulse_host_auth') === 'true' || codeInHash || hasActiveHostSession) {
           setIsHostAuthenticated(true);
           setNavRole('host');
-          setHostMode('dashboard');
+          if (codeInHash) {
+            setHostRoomCode(codeInHash);
+            setHostMode('live');
+          }
         } else {
           setShowHostAuthModal(true);
         }
@@ -65,29 +177,7 @@ export function App() {
     };
     window.addEventListener('hashchange', handler);
     return () => window.removeEventListener('hashchange', handler);
-  }, []);
-
-  // ─── Normal Quiz App ────────────────────────────────────
-  // Navigation: 'host' | 'student'
-  const [navRole, setNavRole] = useState('student');
-
-
-  // Host security & authentication
-  const [isHostAuthenticated, setIsHostAuthenticated] = useState(() => {
-    try {
-      return sessionStorage.getItem('pulse_host_auth') === 'true';
-    } catch {
-      return false;
-    }
-  });
-  const [showHostAuthModal, setShowHostAuthModal] = useState(false);
-
-  // Host sub-state: 'dashboard' | 'editor' | 'live'
-  const [hostMode, setHostMode] = useState('dashboard');
-  const [activeHostQuiz, setActiveHostQuiz] = useState(null);
-  const [hostRoomCode, setHostRoomCode] = useState(null);
-  const [showAIModal, setShowAIModal] = useState(false);
-  const recordedRoomsRef = useRef(new Set());
+  }, [hasActiveHostSession]);
 
   // Handle AI generator result
   const handleAIGenerated = (quizData) => {
@@ -104,11 +194,18 @@ export function App() {
   const handleHostLogout = () => {
     try {
       sessionStorage.removeItem('pulse_host_auth');
+      sessionStorage.removeItem('pulse_host_session');
+      localStorage.removeItem('pulse_host_session');
+      sessionStorage.removeItem('pulse_host_draft_quiz');
     } catch {
       // ignore
     }
+    botSimulator.clearBots();
     setIsHostAuthenticated(false);
+    setHostRoomCode(null);
+    setHostMode('dashboard');
     setNavRole('student');
+    window.history.replaceState(null, '', '#/');
   };
 
   // Student state
@@ -125,17 +222,23 @@ export function App() {
       setNavRole('student');
     }
 
+    const hostCodeInUrl = getHostCodeFromUrl();
     const hostRequested =
+      hostCodeInUrl ||
       params.get('host') === 'true' ||
       params.get('host') === '1' ||
       window.location.pathname.includes('/host') ||
       window.location.hash === '#host' ||
-      window.location.hash === '#/host';
+      window.location.hash.startsWith('#/host');
 
-    if (hostRequested) {
-      if (sessionStorage.getItem('pulse_host_auth') === 'true') {
+    if (hostRequested && !window.location.hash.startsWith('#/host/geoguessr')) {
+      if (sessionStorage.getItem('pulse_host_auth') === 'true' || hostCodeInUrl || hasActiveHostSession) {
         setIsHostAuthenticated(true);
         setNavRole('host');
+        if (hostCodeInUrl || initialHostCode) {
+          setHostRoomCode(hostCodeInUrl || initialHostCode);
+          setHostMode('live');
+        }
       } else {
         setShowHostAuthModal(true);
       }
@@ -157,7 +260,7 @@ export function App() {
     } catch {
       // ignore
     }
-  }, []);
+  }, [hasActiveHostSession, initialHostCode]);
 
   // Subscribe to room states
   const activeRoomCode = navRole === 'host' ? hostRoomCode : studentRoomCode;
@@ -284,8 +387,15 @@ export function App() {
 
   const handleHostExit = () => {
     botSimulator.clearBots();
+    try {
+      sessionStorage.removeItem('pulse_host_session');
+      localStorage.removeItem('pulse_host_session');
+    } catch {
+      // ignore
+    }
     setHostRoomCode(null);
     setHostMode('dashboard');
+    window.history.replaceState(null, '', '#/host');
   };
 
   // -------------------------------------------------------------
@@ -407,6 +517,38 @@ export function App() {
       />
 
       <main className="flex-1 flex flex-col">
+        {/* Active Host Session banner if host switches to student view while hosting */}
+        {hostRoomCode && navRole === 'student' && (
+          <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2.5 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-amber-300">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>
+                Active Host Session in progress (Room PIN: <strong className="font-mono text-white">{hostRoomCode}</strong>)
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setNavRole('host');
+                  setHostMode('live');
+                }}
+                className="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs transition cursor-pointer shadow-sm"
+              >
+                Return to Host Control
+              </button>
+              <button
+                type="button"
+                onClick={handleHostExit}
+                className="px-2.5 py-1 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-red-400 text-xs transition cursor-pointer"
+                title="End active host session"
+              >
+                End Session
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ========================================================================= */}
         {/* HOST PORTAL */}
         {/* ========================================================================= */}
@@ -434,35 +576,71 @@ export function App() {
               />
             )}
 
-            {hostMode === 'live' && room && (
-              <>
-                {room.status === 'LOBBY' && (
-                  <HostLobby
-                    room={room}
-                    onStartQuiz={() => handleHostLaunchQuestion(0)}
-                    onCancelRoom={handleHostExit}
-                  />
-                )}
+            {hostMode === 'live' && (
+              room ? (
+                <>
+                  {room.status === 'LOBBY' && (
+                    <HostLobby
+                      room={room}
+                      onStartQuiz={() => handleHostLaunchQuestion(0)}
+                      onCancelRoom={handleHostExit}
+                    />
+                  )}
 
-                {room.status === 'QUESTION_ACTIVE' && (
-                  <HostControl
-                    room={room}
-                    onRevealAnswers={handleHostRevealAnswers}
-                    onShowLeaderboard={handleHostShowLeaderboard}
-                    onNextQuestion={handleHostNextQuestion}
-                    onEndQuiz={handleHostFinishGame}
-                  />
-                )}
+                  {room.status === 'QUESTION_ACTIVE' && (
+                    <HostControl
+                      room={room}
+                      onRevealAnswers={handleHostRevealAnswers}
+                      onShowLeaderboard={handleHostShowLeaderboard}
+                      onNextQuestion={handleHostNextQuestion}
+                      onEndQuiz={handleHostFinishGame}
+                    />
+                  )}
 
-                {(room.status === 'QUESTION_LEADERBOARD' || room.status === 'FINISHED') && (
-                  <HostLeaderboard
-                    room={room}
-                    onNextQuestion={handleHostNextQuestion}
-                    onFinishGame={handleHostFinishGame}
-                    onRestart={handleHostExit}
-                  />
-                )}
-              </>
+                  {(room.status === 'QUESTION_LEADERBOARD' || room.status === 'FINISHED') && (
+                    <HostLeaderboard
+                      room={room}
+                      onNextQuestion={handleHostNextQuestion}
+                      onFinishGame={handleHostFinishGame}
+                      onRestart={handleHostExit}
+                    />
+                  )}
+                </>
+              ) : loading ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                  <div className="w-12 h-12 rounded-full border-2 border-amber-500/20 border-t-amber-400 animate-spin mb-4" />
+                  <h3 className="text-lg font-semibold text-zinc-100 mb-1">
+                    Reconnecting to Live Host Session...
+                  </h3>
+                  <p className="text-xs text-zinc-500 font-mono mb-4">
+                    Room PIN: <span className="text-amber-400 font-bold">{hostRoomCode}</span>
+                  </p>
+                  <p className="text-xs text-zinc-600 max-w-sm">
+                    Re-establishing real-time Firebase sync with players and question progress...
+                  </p>
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                  <div className="max-w-md w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl text-center">
+                    <div className="w-12 h-12 mx-auto rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-3 text-lg font-bold">
+                      !
+                    </div>
+                    <h3 className="text-base font-semibold text-zinc-200 mb-1">
+                      Host Session Not Found
+                    </h3>
+                    <p className="text-xs text-zinc-400 mb-4">
+                      The room PIN <span className="font-mono text-zinc-300 font-semibold">{hostRoomCode}</span> may have expired or was closed by the host.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleHostExit}
+                      className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-xl transition cursor-pointer"
+                    >
+                      Return to Host Dashboard
+                    </button>
+                  </div>
+                </div>
+              )
             )}
           </>
         )}

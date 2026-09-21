@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Plus,
   Trash2,
@@ -22,11 +22,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card.jsx';
 import { Input } from '../ui/input.jsx';
 
 export function QuizEditor({ initialQuiz, onStartRoom, onSaveQuiz, onBack, onOpenAIGenerator }) {
-  const [title, setTitle] = useState(initialQuiz?.title || 'My Interactive Live Quiz');
-  const [currentQuizId, setCurrentQuizId] = useState(initialQuiz?.id || null);
+  const getInitialDraft = () => {
+    if (initialQuiz) return initialQuiz;
+    try {
+      const raw = sessionStorage.getItem('pulse_host_draft_quiz');
+      if (raw) return JSON.parse(raw);
+    } catch { /* ignore */ }
+    return null;
+  };
+
+  const draft = getInitialDraft();
+  const [title, setTitle] = useState(draft?.title || 'My Interactive Live Quiz');
+  const [currentQuizId, setCurrentQuizId] = useState(draft?.id || null);
   const [savedFeedback, setSavedFeedback] = useState(false);
   const [questions, setQuestions] = useState(
-    initialQuiz?.questions || [
+    draft?.questions || [
       {
         id: 'q_init_1',
         text: 'What does CSS stand for?',
@@ -44,6 +54,17 @@ export function QuizEditor({ initialQuiz, onStartRoom, onSaveQuiz, onBack, onOpe
   );
   const [activeQuestionIdx, setActiveQuestionIdx] = useState(0);
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  // Persist draft in sessionStorage so refreshing does not wipe question edits
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('pulse_host_draft_quiz', JSON.stringify({
+        id: currentQuizId,
+        title,
+        questions,
+      }));
+    } catch { /* ignore */ }
+  }, [title, questions, currentQuizId]);
 
   const currentQ = questions[activeQuestionIdx] || questions[0];
 

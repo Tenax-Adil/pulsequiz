@@ -18,14 +18,30 @@ import { GeoQuizLibraryModal } from './GeoQuizLibraryModal.jsx';
 import { GeoHistoryModal } from './GeoHistoryModal.jsx';
 import { GeoAIGeneratorModal } from './GeoAIGeneratorModal.jsx';
 
+// ─── Saved Geo Host Session recovery ─────────────────────────
+function getSavedGeoSession() {
+  try {
+    const raw = sessionStorage.getItem('pulse_geo_host_session') || localStorage.getItem('pulse_geo_host_session');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed.roomCode && (Date.now() - (parsed.timestamp || 0) < 12 * 60 * 60 * 1000)) {
+      return parsed;
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 /**
  * GeoGuessr Host Control Dashboard
  * Route: /#/host/geoguessr?code=XXXX
  */
 export function GeoHostDashboard({ roomCode: initialRoomCode }) {
-  const [roomCode, setRoomCode] = useState(initialRoomCode || '');
-  const [setupMode, setSetupMode] = useState(!initialRoomCode);
-  const [quizTitle, setQuizTitle] = useState('');
+  const savedGeoSession = getSavedGeoSession();
+  const effectiveInitialCode = initialRoomCode || savedGeoSession?.roomCode || '';
+
+  const [roomCode, setRoomCode] = useState(effectiveInitialCode);
+  const [setupMode, setSetupMode] = useState(!effectiveInitialCode);
+  const [quizTitle, setQuizTitle] = useState(() => savedGeoSession?.quizTitle || '');
   const [currentQuizId, setCurrentQuizId] = useState(null);
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -75,10 +91,37 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
     if (initialRoomCode) {
       setRoomCode(initialRoomCode);
       setSetupMode(false);
+    } else if (!roomCode) {
+      const saved = getSavedGeoSession();
+      if (saved?.roomCode) {
+        setRoomCode(saved.roomCode);
+        setSetupMode(false);
+        if (saved.quizTitle) setQuizTitle(saved.quizTitle);
+      }
     }
-  }, [initialRoomCode]);
+  }, [initialRoomCode, roomCode]);
 
-  const { geoRoom, updateGeoState, mirrorCoords, confirmGuess, passTurn, updatePlayerScore } = useGeoRoomSync(roomCode);
+  // Keep active Geo session persisted and URL updated while hosting
+  useEffect(() => {
+    if (roomCode && !setupMode) {
+      const sessionData = {
+        roomCode,
+        quizTitle: quizTitle || 'GeoGuessr Live',
+        timestamp: Date.now(),
+      };
+      try {
+        sessionStorage.setItem('pulse_geo_host_session', JSON.stringify(sessionData));
+        localStorage.setItem('pulse_geo_host_session', JSON.stringify(sessionData));
+      } catch { /* ignore */ }
+
+      const targetHash = `#/host/geoguessr?code=${roomCode}`;
+      if (window.location.hash !== targetHash) {
+        window.history.replaceState(null, '', targetHash);
+      }
+    }
+  }, [roomCode, setupMode, quizTitle]);
+
+  const { geoRoom, loading, updateGeoState, mirrorCoords, confirmGuess, passTurn, updatePlayerScore } = useGeoRoomSync(roomCode);
 
   const status = geoRoom?.status;
   const locIdx = geoRoom?.currentLocationIndex || 0;
@@ -279,6 +322,12 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
         await persistMatchHistory();
       }
     }
+    try {
+      sessionStorage.removeItem('pulse_geo_host_session');
+      localStorage.removeItem('pulse_geo_host_session');
+    } catch {
+      // ignore
+    }
     if (roomCode) {
       await closeGeoRoom(roomCode);
     }
@@ -308,6 +357,12 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
   };
 
   const handleNewGameSetup = () => {
+    try {
+      sessionStorage.removeItem('pulse_geo_host_session');
+      localStorage.removeItem('pulse_geo_host_session');
+    } catch {
+      // ignore
+    }
     setRoomCode('');
     setSetupMode(true);
     window.location.hash = '#/host/geoguessr';
@@ -320,8 +375,21 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
       await createGeoRoom(code, selectedLocations, 'Host');
       setRoomCode(code);
       setSetupMode(false);
+
+      const sessionData = {
+        roomCode: code,
+        quizTitle: quizTitle || 'GeoGuessr Live',
+        timestamp: Date.now(),
+      };
+      try {
+        sessionStorage.setItem('pulse_geo_host_session', JSON.stringify(sessionData));
+        localStorage.setItem('pulse_geo_host_session', JSON.stringify(sessionData));
+      } catch {
+        // ignore
+      }
+
       // Update URL hash
-      window.location.hash = `#/host/geoguessr?code=${code}`;
+      window.history.replaceState(null, '', `#/host/geoguessr?code=${code}`);
     } catch (err) {
       console.error('Failed to create GeoGuessr room:', err);
       alert('Failed to create room. Please try again.');
@@ -823,6 +891,49 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
           onClose={() => setIsAIGeneratorOpen(false)}
           onGenerated={handleAIGeneratedGeoQuiz}
         />
+      </div>
+    );
+  }
+
+  // ─── RECONNECTING / SESSION NOT FOUND HANDLER ─────────────
+  if (!setupMode && !geoRoom) {
+    if (loading) {
+      return (
+        <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center p-8 text-center">
+          <div className="w-12 h-12 rounded-full border-2 border-amber-500/20 border-t-amber-400 animate-spin mb-4" />
+          <h3 className="text-lg font-semibold text-zinc-100 mb-1">
+            Reconnecting to Geo Host Session...
+          </h3>
+          <p className="text-xs text-zinc-500 font-mono mb-4">
+            Room PIN: <span className="text-amber-400 font-bold">{roomCode}</span>
+          </p>
+          <p className="text-xs text-zinc-600 max-w-sm">
+            Restoring live 360° panorama state, player buzzer queue, and leaderboard...
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center p-8 text-center">
+        <div className="max-w-md w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl text-center">
+          <div className="w-12 h-12 mx-auto rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-3 text-lg font-bold">
+            !
+          </div>
+          <h3 className="text-base font-semibold text-zinc-200 mb-1">
+            Geo Session Not Found
+          </h3>
+          <p className="text-xs text-zinc-400 mb-4">
+            Room PIN <span className="font-mono text-zinc-300 font-semibold">{roomCode}</span> was closed or could not be found.
+          </p>
+          <button
+            type="button"
+            onClick={handleNewGameSetup}
+            className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-xl transition cursor-pointer"
+          >
+            Create New Room / Setup
+          </button>
+        </div>
       </div>
     );
   }
