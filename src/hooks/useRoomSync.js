@@ -3,6 +3,7 @@ import {
   subscribeToRoom,
   updateRoom,
   submitAnswer,
+  kickPlayer,
   isFirebaseLive,
 } from '../services/firebase.js';
 
@@ -70,6 +71,18 @@ export function useRoomSync(roomCode) {
     [roomCode]
   );
 
+  const kick = useCallback(
+    async (playerId) => {
+      if (!roomCode || !playerId) return;
+      try {
+        await kickPlayer(roomCode, playerId);
+      } catch (err) {
+        console.error('Failed to kick player:', err);
+      }
+    },
+    [roomCode]
+  );
+
   return {
     room,
     loading,
@@ -77,5 +90,6 @@ export function useRoomSync(roomCode) {
     isLive,
     updateRoom: update,
     submitAnswer: answer,
+    kickPlayer: kick,
   };
 }

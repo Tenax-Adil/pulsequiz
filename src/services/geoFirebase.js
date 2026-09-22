@@ -16,6 +16,7 @@ import {
   set,
   update,
   get,
+  remove,
   serverTimestamp,
 } from 'firebase/database';
 
@@ -228,6 +229,7 @@ export async function updateGeoState(roomCode, updates) {
 // ─── Join GeoGuessr Room (Player) ────────────────────────────
 export async function joinGeoRoom(roomCode, player) {
   const playerData = {
+    id: player.id,
     nickname: player.nickname,
     avatar: player.avatar || '🌍',
     score: 0,
@@ -238,9 +240,16 @@ export async function joinGeoRoom(roomCode, player) {
   const db = getDb();
   if (db) {
     try {
+      // Check if player was kicked by host
+      const kickedSnap = await get(ref(db, `${getFirebaseRoomPath(roomCode)}/kicked/${player.id}`));
+      if (kickedSnap.exists() && kickedSnap.val()) {
+        throw new Error('You have been removed from this GeoGuessr session by the host.');
+      }
+
       await set(ref(db, `${getFirebaseRoomPath(roomCode)}/players/${player.id}`), playerData);
       return;
     } catch (fbErr) {
+      if (fbErr.message?.includes('removed from this GeoGuessr session')) throw fbErr;
       console.warn('Firebase join failed, falling back to local sync engine:', fbErr);
     }
   }
@@ -255,12 +264,73 @@ export async function joinGeoRoom(roomCode, player) {
   }
   if (!current) throw new Error('GeoGuessr room not found');
 
+  if (current.kicked?.[player.id]) {
+    throw new Error('You have been removed from this GeoGuessr session by the host.');
+  }
+
   const updated = {
     ...current,
     players: {
       ...(current.players || {}),
       [player.id]: playerData,
     },
+  };
+  broadcastLocalUpdate(roomCode, updated);
+}
+
+// ─── Host Kicks / Removes a Player from GeoGuessr Room ────────
+export async function kickGeoPlayer(roomCode, playerId) {
+  const db = getDb();
+  if (db) {
+    try {
+      // 1. Remove from players
+      await remove(ref(db, `${getFirebaseRoomPath(roomCode)}/players/${playerId}`));
+      // 2. Remove from buzzerQueue if present
+      await remove(ref(db, `${getFirebaseRoomPath(roomCode)}/buzzerQueue/${playerId}`));
+      // 3. Mark as kicked
+      await set(ref(db, `${getFirebaseRoomPath(roomCode)}/kicked/${playerId}`), true);
+
+      // 4. Check if active player was this player
+      const activeSnap = await get(ref(db, `${getFirebaseRoomPath(roomCode)}/activePlayer`));
+      if (activeSnap.exists() && activeSnap.val() === playerId) {
+        await update(ref(db, getFirebaseRoomPath(roomCode)), {
+          activePlayer: null,
+          status: GEO_STATES.PANORAMA,
+        });
+      }
+      return;
+    } catch (err) {
+      console.warn('Firebase kickGeoPlayer error, falling back to local sync:', err);
+    }
+  }
+
+  // Local fallback
+  let current = localGeoStore.get(roomCode);
+  if (!current) {
+    try {
+      const saved = localStorage.getItem(`pulse_geo_${roomCode}`);
+      if (saved) current = JSON.parse(saved);
+    } catch { /* ignore */ }
+  }
+  if (!current) return;
+
+  const updatedPlayers = { ...(current.players || {}) };
+  delete updatedPlayers[playerId];
+
+  const updatedBuzzerQueue = { ...(current.buzzerQueue || {}) };
+  delete updatedBuzzerQueue[playerId];
+
+  const updatedKicked = { ...(current.kicked || {}), [playerId]: true };
+
+  const isCurrentActive = current.activePlayer === playerId;
+
+  const updated = {
+    ...current,
+    players: updatedPlayers,
+    buzzerQueue: updatedBuzzerQueue,
+    kicked: updatedKicked,
+    activePlayer: isCurrentActive ? null : current.activePlayer,
+    status: isCurrentActive ? GEO_STATES.PANORAMA : current.status,
   };
   broadcastLocalUpdate(roomCode, updated);
 }
@@ -321,14 +391,28 @@ export async function confirmGuess(roomCode, revealResult) {
 }
 
 // ─── Pass Turn ───────────────────────────────────────────────
-export async function passTurn(roomCode, nextPlayerId, timerDuration) {
+export async function passTurn(roomCode, nextPlayerId, extraUpdates = {}) {
   await updateGeoState(roomCode, {
-    activePlayer: nextPlayerId,
+    activePlayer: nextPlayerId || null,
     mirroredCoords: null,
     revealResult: null,
-    timer: nextPlayerId
-      ? { startedAt: Date.now(), durationSec: timerDuration }
-      : null,
+    timer: null,
+    ...extraUpdates,
+  });
+}
+
+// ─── Record Failed (0 PTS) Guess & Shift Turn ────────────────
+export async function recordFailedGuess(roomCode, playerId, nextPlayerId = null, extraData = {}) {
+  await updateGeoState(roomCode, {
+    activePlayer: nextPlayerId || null,
+    mirroredCoords: null,
+    revealResult: null,
+    timer: null,
+    lastFailedGuess: {
+      playerId,
+      timestamp: Date.now(),
+      ...extraData,
+    },
   });
 }
 

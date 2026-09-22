@@ -5,7 +5,9 @@ import {
   Play,
   Bot,
   Copy,
-  Check
+  Check,
+  X,
+  UserX,
 } from 'lucide-react';
 import { QRModal } from '../Common/QRModal.jsx';
 import { botSimulator } from '../../services/mockBots.js';
@@ -14,12 +16,14 @@ import { Button } from '../ui/button.jsx';
 import { Badge } from '../ui/badge.jsx';
 import { Card } from '../ui/card.jsx';
 
-export function HostLobby({ room, onStartQuiz, onCancelRoom }) {
+export function HostLobby({ room, onStartQuiz, onCancelRoom, onKickPlayer }) {
   const [showQR, setShowQR] = useState(false);
   const [copied, setCopied] = useState(false);
   const [spawningBots, setSpawningBots] = useState(false);
 
-  const players = room?.players ? Object.values(room.players) : [];
+  const players = room?.players
+    ? Object.entries(room.players).map(([id, p]) => ({ id: p.id || id, ...p }))
+    : [];
   const playerCount = players.length;
 
   const copyCode = () => {
@@ -159,10 +163,25 @@ export function HostLobby({ room, onStartQuiz, onCancelRoom }) {
             {players.map((p, idx) => (
               <div
                 key={p.id || idx}
-                className="flex items-center gap-2 bg-zinc-800/80 border border-zinc-700/60 px-3 py-1.5 rounded-xl shadow-sm text-xs font-medium text-zinc-200 animate-fade-in"
+                className="group relative flex items-center gap-2 bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/60 hover:border-red-500/40 pl-3 pr-2 py-1.5 rounded-xl shadow-sm text-xs font-medium text-zinc-200 transition animate-fade-in"
               >
                 <span>{p.avatar || '⚡'}</span>
-                <span>{p.nickname}</span>
+                <span className="max-w-[120px] truncate">{p.nickname}</span>
+                {onKickPlayer && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`Kick "${p.nickname}" from this quiz room?`)) {
+                        onKickPlayer(p.id);
+                      }
+                    }}
+                    className="text-zinc-500 hover:text-red-400 hover:bg-red-500/15 p-0.5 rounded-md transition cursor-pointer"
+                    title={`Kick ${p.nickname}`}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             ))}
           </div>

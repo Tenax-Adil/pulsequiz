@@ -44,32 +44,37 @@ export function haversineDistance(lat1, lon1, lat2, lon2) {
 /**
  * Calculate GeoGuessr score using exponential decay.
  * Max 5000 points, decays with distance, penalized by buzzer rank.
- *
- * Formula: round(5000 * e^(-distance/400)) - (rank * 50)
- * Clamped to minimum 0.
+ * If distanceKm exceeds toleranceKm, yields 0 points (guess failed).
  *
  * @param {number} distanceKm - Distance from guess to target in km
  * @param {number} buzzerRank - 0-indexed rank (0 = first buzzer, 1 = second, etc.)
+ * @param {number|null} toleranceKm - Maximum acceptable radius in km for a valid guess
  * @returns {number} Points awarded (0–5000)
  */
-export function calculateGeoScore(distanceKm, buzzerRank = 0) {
+export function calculateGeoScore(distanceKm, buzzerRank = 0, toleranceKm = null) {
+  // If guess is outside the location's acceptable tolerance, award 0 points
+  if (toleranceKm != null && distanceKm > toleranceKm) {
+    return 0;
+  }
+
   const MAX_POINTS = 5000;
-  const DECAY_FACTOR = 400; // km — controls how fast points drop
+  const DECAY_FACTOR = toleranceKm ? Math.max(250, toleranceKm * 1.5) : 400;
   const RANK_PENALTY = 50;  // points per rank position
 
   const baseScore = MAX_POINTS * Math.exp(-distanceKm / DECAY_FACTOR);
   const penalty = buzzerRank * RANK_PENALTY;
   const finalScore = Math.round(baseScore) - penalty;
 
-  return Math.max(0, finalScore);
+  // Guesses inside tolerance receive at least 100 points
+  return Math.max(toleranceKm ? 100 : 0, finalScore);
 }
 
-// ─── Timer Defaults ───────────────────────────────────────────
+// ─── Timer Defaults (Deprecated: GeoGuessr operates without countdown limits) ───
 export const GEO_TIMERS = {
-  TAG_TIME_FIRST: 15,   // seconds for first buzzer to walk up & tag
-  TAG_TIME_PASS: 10,    // seconds for subsequent buzzers
-  REVEAL_DISPLAY: 5,    // seconds to show reveal animation
-  ROUND_WRAP: 4,        // seconds to show round results before next
+  TAG_TIME_FIRST: 0,
+  TAG_TIME_PASS: 0,
+  REVEAL_DISPLAY: 5,
+  ROUND_WRAP: 4,
 };
 
 // ─── Rank Labels ──────────────────────────────────────────────

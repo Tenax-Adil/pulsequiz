@@ -6,8 +6,10 @@ import {
   mirrorCoords,
   confirmGuess,
   passTurn,
+  recordFailedGuess,
   updatePlayerScore,
   joinGeoRoom,
+  kickGeoPlayer,
 } from '../services/geoFirebase.js';
 
 /**
@@ -81,10 +83,19 @@ export function useGeoRoomSync(roomCode) {
   );
 
   const dispatchPass = useCallback(
-    async (nextPlayerId, timerDuration) => {
+    async (nextPlayerId, extraUpdates) => {
       if (!roomCode) return;
-      try { await passTurn(roomCode, nextPlayerId, timerDuration); }
+      try { await passTurn(roomCode, nextPlayerId, extraUpdates); }
       catch (err) { console.error('Pass turn error:', err); }
+    },
+    [roomCode]
+  );
+
+  const dispatchFailedGuess = useCallback(
+    async (playerId, nextPlayerId, extraData) => {
+      if (!roomCode) return;
+      try { await recordFailedGuess(roomCode, playerId, nextPlayerId, extraData); }
+      catch (err) { console.error('Record failed guess error:', err); }
     },
     [roomCode]
   );
@@ -107,6 +118,15 @@ export function useGeoRoomSync(roomCode) {
     [roomCode]
   );
 
+  const dispatchKick = useCallback(
+    async (playerId) => {
+      if (!roomCode || !playerId) return;
+      try { await kickGeoPlayer(roomCode, playerId); }
+      catch (err) { console.error('Kick GeoGuessr player error:', err); }
+    },
+    [roomCode]
+  );
+
   return {
     geoRoom,
     loading,
@@ -116,7 +136,9 @@ export function useGeoRoomSync(roomCode) {
     mirrorCoords: dispatchMirror,
     confirmGuess: dispatchConfirm,
     passTurn: dispatchPass,
+    recordFailedGuess: dispatchFailedGuess,
     updatePlayerScore: dispatchScoreUpdate,
     joinGeoRoom: dispatchJoin,
+    kickGeoPlayer: dispatchKick,
   };
 }

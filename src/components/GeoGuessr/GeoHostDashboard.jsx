@@ -1,17 +1,16 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useGeoRoomSync } from '../../hooks/useGeoRoomSync.js';
-import { GEO_STATES, haversineDistance, calculateGeoScore, formatDistance, formatPoints, getRankLabel, GEO_TIMERS } from '../../services/geoEngine.js';
+import { GEO_STATES, haversineDistance, calculateGeoScore, formatDistance, formatPoints, getRankLabel } from '../../services/geoEngine.js';
 import { createGeoRoom, generateRoomCode, saveGeoQuiz, closeGeoRoom, recordGeoGameHistory, fetchSavedGeoQuizzes } from '../../services/geoFirebase.js';
 import { GeoLeafletMap } from './GeoLeafletMap.jsx';
 import { GeoPanorama } from './GeoPanorama.jsx';
-import { GeoTimer } from './GeoTimer.jsx';
 import { soundFx } from '../../services/audio.js';
 import {
   Globe, Play, SkipForward, Check, X, Users,
   RotateCcw, Map as MapIcon, Crosshair, Trophy,
   ArrowRight, Copy, ExternalLink, Eye, EyeOff, Plus,
   Footprints, RefreshCw, Save, BookOpen, LogOut, ArrowLeft,
-  History, Sparkles, Edit3, ChevronUp, ChevronDown, Trash2, MapPin
+  History, Sparkles, Edit3, ChevronUp, ChevronDown, Trash2, MapPin, UserX
 } from 'lucide-react';
 import { GeoAddLocationModal } from './GeoAddLocationModal.jsx';
 import { GeoQuizLibraryModal } from './GeoQuizLibraryModal.jsx';
@@ -121,7 +120,7 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
     }
   }, [roomCode, setupMode, quizTitle]);
 
-  const { geoRoom, loading, updateGeoState, mirrorCoords, confirmGuess, passTurn, updatePlayerScore } = useGeoRoomSync(roomCode);
+  const { geoRoom, loading, updateGeoState, mirrorCoords, confirmGuess, passTurn, updatePlayerScore, kickGeoPlayer } = useGeoRoomSync(roomCode);
 
   const status = geoRoom?.status;
   const locIdx = geoRoom?.currentLocationIndex || 0;
@@ -149,6 +148,23 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
       .map(([id, data]) => ({ id, ...data }))
       .sort((a, b) => (b.score || 0) - (a.score || 0));
   }, [playersRaw]);
+
+  // Live distance and points preview for mirrored coordinates
+  const previewDistance = useMemo(() => {
+    if (!mirroredCoords || !currentLoc) return null;
+    return haversineDistance(
+      mirroredCoords.lat, mirroredCoords.lon,
+      currentLoc.lat, currentLoc.lon
+    );
+  }, [mirroredCoords, currentLoc]);
+
+  const previewPoints = useMemo(() => {
+    if (previewDistance === null || !currentLoc) return 0;
+    const activeIdx = sortedQueue.findIndex(b => b.id === activePlayerId);
+    const buzzerRank = activeIdx >= 0 ? activeIdx : 0;
+    const tolerance = currentLoc.toleranceKm || 200;
+    return calculateGeoScore(previewDistance, buzzerRank, tolerance);
+  }, [previewDistance, currentLoc, sortedQueue, activePlayerId]);
 
 
   // ─── CUSTOM LOCATIONS MANAGEMENT ──────────────────────
@@ -334,6 +350,17 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
     window.location.hash = '#/host';
   };
 
+  const handleKickPlayer = async (playerId, nickname) => {
+    if (!roomCode || !playerId) return;
+    if (window.confirm(`Kick "${nickname || 'player'}" from this GeoGuessr room?`)) {
+      try {
+        await kickGeoPlayer(playerId);
+      } catch (err) {
+        console.error('Failed to kick player:', err);
+      }
+    }
+  };
+
   const handlePlayAgain = async () => {
     soundFx.playSelect();
     setHostPeek(false);
@@ -411,11 +438,11 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
   };
 
   const handleShowMap = async () => {
-    // Transition from panorama to map (manual, without buzzer)
+    // Transition from panorama to map (manual)
     soundFx.playSelect();
     await updateGeoState({
       status: GEO_STATES.HOST_MIRROR,
-      timer: { startedAt: Date.now(), durationSec: GEO_TIMERS.TAG_TIME_FIRST },
+      timer: null,
     });
   };
 
@@ -430,28 +457,26 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
       await updateGeoState({
         status: GEO_STATES.ROUND_WRAP,
         currentLocationIndex: locIdx,
+        failedPlayers: {},
+        lastFailedGuess: null,
       });
     }
   };
 
-  // When a buzzer comes in, lock buzzers and switch to map
+  // When a buzzer comes in or if active player is empty and someone is queued, assign active player
   useEffect(() => {
-    if (status === GEO_STATES.PANORAMA && sortedQueue.length > 0) {
-      const firstBuzzer = sortedQueue[0];
-      soundFx.playSelect();
-
-      updateGeoState({
-        status: GEO_STATES.BUZZER_LOCKED,
-        activePlayer: firstBuzzer.id,
-        timer: { startedAt: Date.now(), durationSec: GEO_TIMERS.TAG_TIME_FIRST },
-      }).then(() => {
-        // Transition to host mirror after brief lockout display
-        setTimeout(() => {
-          updateGeoState({ status: GEO_STATES.HOST_MIRROR });
-        }, 1500);
-      });
+    if ((status === GEO_STATES.PANORAMA || status === GEO_STATES.HOST_MIRROR) && sortedQueue.length > 0 && !activePlayerId) {
+      const nextCandidate = sortedQueue.find(b => !geoRoom?.failedPlayers?.[b.id]);
+      if (nextCandidate) {
+        soundFx.playSelect();
+        updateGeoState({
+          status: GEO_STATES.HOST_MIRROR,
+          activePlayer: nextCandidate.id,
+          timer: null,
+        });
+      }
     }
-  }, [sortedQueue.length, status]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sortedQueue.length, status, activePlayerId, geoRoom?.failedPlayers]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleMapClick = useCallback((lat, lon) => {
     if (status !== GEO_STATES.HOST_MIRROR) return;
@@ -468,40 +493,98 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
 
     const activeIdx = sortedQueue.findIndex(b => b.id === activePlayerId);
     const buzzerRank = activeIdx >= 0 ? activeIdx : 0;
-    const points = calculateGeoScore(distanceKm, buzzerRank);
-    const isCorrect = distanceKm <= (currentLoc.toleranceKm || 200);
+    const tolerance = currentLoc.toleranceKm || 200;
+    const points = calculateGeoScore(distanceKm, buzzerRank, tolerance);
 
-    // Update player score
-    if (activePlayerId && points > 0) {
-      const currentScore = players[activePlayerId]?.score || 0;
-      await updatePlayerScore(activePlayerId, currentScore + points);
+    if (points > 0) {
+      // ─── SCENARIO 1: SOMEONE SCORED POINTS (> 0 PTS) ───────────
+      // Update player score
+      if (activePlayerId) {
+        const currentScore = players[activePlayerId]?.score || 0;
+        await updatePlayerScore(activePlayerId, currentScore + points);
+      }
+
+      soundFx.playCorrect();
+
+      // REVEAL TRUE LOCATION!
+      await confirmGuess({
+        distanceKm,
+        points,
+        isCorrect: true,
+        playerId: activePlayerId,
+        locationId: currentLoc.id,
+        realCoords: { lat: currentLoc.lat, lon: currentLoc.lon },
+        guessCoords: { lat: mirroredCoords.lat, lon: mirroredCoords.lon },
+      });
+    } else {
+      // ─── SCENARIO 2: 0 POINTS (GUESS OUTSIDE TOLERANCE) ────────
+      // DO NOT REVEAL LOCATION! Location remains hidden
+      soundFx.playWrong();
+
+      const failedPlayerName = players[activePlayerId]?.nickname || 'Player';
+      const updatedFailed = {
+        ...(geoRoom?.failedPlayers || {}),
+        ...(activePlayerId ? { [activePlayerId]: true } : {}),
+      };
+
+      // Shift to the next player in the buzzer queue who hasn't failed yet
+      const nextCandidate = sortedQueue.find(
+        b => b.id !== activePlayerId && !updatedFailed[b.id]
+      );
+
+      await updateGeoState({
+        status: GEO_STATES.HOST_MIRROR,
+        activePlayer: nextCandidate ? nextCandidate.id : null,
+        mirroredCoords: null,
+        revealResult: null,
+        timer: null,
+        failedPlayers: updatedFailed,
+        lastFailedGuess: {
+          playerId: activePlayerId,
+          playerName: failedPlayerName,
+          distanceKm,
+          timestamp: Date.now(),
+        },
+      });
     }
-
-    soundFx.playCorrect();
-
-    await confirmGuess({
-      distanceKm,
-      points,
-      isCorrect,
-      playerId: activePlayerId,
-      locationId: currentLoc.id,
-    });
   };
 
   const handlePassTurn = async () => {
-    const activeIdx = sortedQueue.findIndex(b => b.id === activePlayerId);
-    const nextIdx = activeIdx + 1;
-
     soundFx.playWrong();
+    const updatedFailed = {
+      ...(geoRoom?.failedPlayers || {}),
+      ...(activePlayerId ? { [activePlayerId]: true } : {}),
+    };
 
-    if (nextIdx < sortedQueue.length) {
-      // Pass to next in queue
-      const nextPlayer = sortedQueue[nextIdx];
-      await passTurn(nextPlayer.id, GEO_TIMERS.TAG_TIME_PASS);
-    } else {
-      // No more buzzers — skip to round wrap
-      handleForceSkip();
-    }
+    const nextCandidate = sortedQueue.find(
+      b => b.id !== activePlayerId && !updatedFailed[b.id]
+    );
+
+    await updateGeoState({
+      status: GEO_STATES.HOST_MIRROR,
+      activePlayer: nextCandidate ? nextCandidate.id : null,
+      mirroredCoords: null,
+      revealResult: null,
+      timer: null,
+      failedPlayers: updatedFailed,
+    });
+  };
+
+  const handleForceReveal = async () => {
+    if (!currentLoc) return;
+    soundFx.playWrong();
+    await updateGeoState({
+      status: GEO_STATES.REVEAL,
+      activePlayer: null,
+      revealResult: {
+        distanceKm: 0,
+        points: 0,
+        isCorrect: false,
+        skipped: true,
+        locationId: currentLoc.id,
+        realCoords: { lat: currentLoc.lat, lon: currentLoc.lon },
+      },
+    });
   };
 
   const handleNextLocation = async () => {
@@ -518,6 +601,8 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
         mirroredCoords: null,
         revealResult: null,
         timer: null,
+        failedPlayers: {},
+        lastFailedGuess: null,
       });
     }
   };
@@ -531,6 +616,8 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
       mirroredCoords: null,
       revealResult: null,
       timer: null,
+      failedPlayers: {},
+      lastFailedGuess: null,
     });
   };
 
@@ -1067,7 +1154,7 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
                   return (
                     <div
                       key={b.id}
-                      className={`flex items-center gap-2 p-2 rounded-lg transition ${
+                      className={`group flex items-center gap-2 p-2 rounded-lg transition ${
                         isActive
                           ? 'bg-amber-500/15 border border-amber-500/30'
                           : 'bg-zinc-900/50 border border-transparent'
@@ -1077,14 +1164,22 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
                         {getRankLabel(i)}
                       </span>
                       <span className="text-sm">{p?.avatar || '🌍'}</span>
-                      <span className={`text-sm font-medium flex-1 ${isActive ? 'text-amber-300' : 'text-zinc-300'}`}>
+                      <span className={`text-sm font-medium flex-1 truncate ${isActive ? 'text-amber-300' : 'text-zinc-300'}`}>
                         {p?.nickname || b.id}
                       </span>
                       {isActive && (
-                        <span className="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded mr-1">
                           ACTIVE
                         </span>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => handleKickPlayer(b.id, p?.nickname)}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-zinc-500 hover:text-red-400 hover:bg-red-500/15 rounded transition cursor-pointer shrink-0"
+                        title={`Kick ${p?.nickname || 'player'}`}
+                      >
+                        <UserX className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   );
                 })}
@@ -1098,11 +1193,19 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
               <Trophy className="w-3 h-3 inline mr-1" /> Leaderboard
             </div>
             {leaderboard.map((p, i) => (
-              <div key={p.id} className="flex items-center gap-2 py-1">
+              <div key={p.id} className="group flex items-center gap-2 py-1">
                 <span className="text-xs font-bold w-5 text-zinc-500">{i + 1}</span>
                 <span className="text-xs">{p.avatar}</span>
                 <span className="text-xs text-zinc-300 flex-1 truncate">{p.nickname}</span>
                 <span className="text-xs font-bold text-amber-400 tabular-nums">{(p.score || 0).toLocaleString()}</span>
+                <button
+                  type="button"
+                  onClick={() => handleKickPlayer(p.id, p.nickname)}
+                  className="opacity-0 group-hover:opacity-100 p-1 text-zinc-500 hover:text-red-400 hover:bg-red-500/15 rounded transition cursor-pointer shrink-0"
+                  title={`Kick ${p.nickname}`}
+                >
+                  <UserX className="w-3.5 h-3.5" />
+                </button>
               </div>
             ))}
           </div>
@@ -1140,19 +1243,38 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
                 <button
                   onClick={handleConfirmGuess}
                   disabled={!mirroredCoords}
-                  className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold flex items-center justify-center gap-2 transition cursor-pointer"
+                  className={`w-full py-2.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold flex items-center justify-center gap-2 transition cursor-pointer shadow-lg ${
+                    previewPoints > 0
+                      ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/20'
+                      : 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/20'
+                  }`}
                 >
-                  <Check className="w-4 h-4" /> Confirm & Reveal
+                  <Check className="w-4 h-4" />
+                  {!mirroredCoords
+                    ? 'Click Map to Tag Guess'
+                    : previewPoints > 0
+                      ? `Confirm & Reveal (+${previewPoints.toLocaleString()} PTS)`
+                      : '0 PTS — Pass to Next Buzzer'}
                 </button>
-                <button
-                  onClick={handlePassTurn}
-                  className="w-full py-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-400 text-sm font-semibold flex items-center justify-center gap-2 transition cursor-pointer border border-red-500/20"
-                >
-                  <X className="w-3.5 h-3.5" /> Pass Turn
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={handlePassTurn}
+                    className="py-2 px-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer border border-red-500/20"
+                    title="Pass turn to next player in queue"
+                  >
+                    <X className="w-3.5 h-3.5" /> Pass Turn
+                  </button>
+                  <button
+                    onClick={handleForceReveal}
+                    className="py-2 px-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer border border-zinc-700/60"
+                    title="Reveal true location if nobody knows it"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-amber-400" /> Force Reveal
+                  </button>
+                </div>
                 <button
                   onClick={handleResetRound}
-                  className="w-full py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+                  className="w-full py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 text-xs flex items-center justify-center gap-2 transition cursor-pointer border border-zinc-800"
                 >
                   <RotateCcw className="w-3 h-3" /> Reset Round
                 </button>
@@ -1255,6 +1377,41 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
                   <ExternalLink className="w-4 h-4 text-emerald-400" />
                   <span>Open Player Buzzer</span>
                 </button>
+              </div>
+
+              {/* Joined Players in Geo Lobby */}
+              <div className="w-full max-w-lg mt-8 border border-zinc-800/80 bg-zinc-900/60 rounded-2xl p-4 shadow-xl">
+                <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-zinc-800">
+                  <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-amber-400" />
+                    Joined Players ({leaderboard.length})
+                  </span>
+                  <span className="text-[11px] text-zinc-500">Host can remove unwanted players</span>
+                </div>
+
+                {leaderboard.length === 0 ? (
+                  <p className="text-xs text-zinc-600 py-3 italic">Waiting for contestants to enter PIN...</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2 justify-center max-h-44 overflow-y-auto p-1">
+                    {leaderboard.map((p) => (
+                      <div
+                        key={p.id}
+                        className="group flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-xl bg-zinc-800/80 border border-zinc-700/60 hover:border-red-500/40 text-xs font-medium text-zinc-200 transition animate-fade-in"
+                      >
+                        <span>{p.avatar || '🌍'}</span>
+                        <span className="max-w-[120px] truncate">{p.nickname}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleKickPlayer(p.id, p.nickname)}
+                          className="text-zinc-500 hover:text-red-400 hover:bg-red-500/15 p-1 rounded-md transition cursor-pointer"
+                          title={`Kick ${p.nickname}`}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ) : status === GEO_STATES.FINISHED ? (
@@ -1481,14 +1638,15 @@ export function GeoHostDashboard({ roomCode: initialRoomCode }) {
               )}
 
 
-              {/* Timer overlay on map */}
-              {timer && status === GEO_STATES.HOST_MIRROR && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-72 z-[1000]">
-                  <GeoTimer
-                    durationSec={timer.durationSec}
-                    startedAt={timer.startedAt}
-                    label="Tag Time"
-                  />
+              {/* Failed guess notification overlay on map */}
+              {geoRoom?.lastFailedGuess && status === GEO_STATES.HOST_MIRROR && !mirroredCoords && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] animate-fade-in-up">
+                  <div className="px-5 py-2.5 rounded-xl bg-zinc-900/95 border border-red-500/40 backdrop-blur-md flex items-center gap-2.5 shadow-2xl">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-400 animate-ping" />
+                    <span className="text-xs font-semibold text-zinc-200">
+                      <strong className="text-red-400">{geoRoom.lastFailedGuess.playerName || 'Last player'}</strong> scored 0 PTS &bull; Location remains hidden!
+                    </span>
+                  </div>
                 </div>
               )}
 

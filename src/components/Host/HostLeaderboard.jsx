@@ -6,7 +6,8 @@ import {
   ArrowRight,
   RotateCcw,
   Sparkles,
-  Crown
+  Crown,
+  UserX,
 } from 'lucide-react';
 import { soundFx } from '../../services/audio.js';
 import { Button } from '../ui/button.jsx';
@@ -17,6 +18,7 @@ export function HostLeaderboard({
   onNextQuestion,
   onFinishGame,
   onRestart,
+  onKickPlayer,
 }) {
   const isFinal = room.status === 'FINISHED';
   const currentIdx = room.currentQuestionIndex || 0;
@@ -147,7 +149,7 @@ export function HostLeaderboard({
           {sortedPlayers.slice(0, 6).map((player, idx) => (
             <div
               key={player.id || idx}
-              className={`flex items-center justify-between p-3.5 rounded-xl border transition ${
+              className={`group flex items-center justify-between p-3.5 rounded-xl border transition ${
                 idx === 0
                   ? 'bg-zinc-850 border-zinc-700 shadow-sm'
                   : 'bg-zinc-900/60 border-zinc-800'
@@ -179,14 +181,32 @@ export function HostLeaderboard({
                 </div>
               </div>
 
-              <div className="text-right">
-                <div className="text-base font-bold text-white font-mono">
-                  {player.score || 0}
-                </div>
-                {player.lastRoundPoints > 0 && (
-                  <div className="text-xs font-semibold text-emerald-400">
-                    +{player.lastRoundPoints}
+              <div className="flex items-center gap-2.5">
+                <div className="text-right">
+                  <div className="text-base font-bold text-white font-mono">
+                    {player.score || 0}
                   </div>
+                  {player.lastRoundPoints > 0 && (
+                    <div className="text-xs font-semibold text-emerald-400">
+                      +{player.lastRoundPoints}
+                    </div>
+                  )}
+                </div>
+
+                {onKickPlayer && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`Kick "${player.nickname}" from the quiz?`)) {
+                        onKickPlayer(player.id);
+                      }
+                    }}
+                    className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition cursor-pointer"
+                    title={`Kick ${player.nickname}`}
+                  >
+                    <UserX className="w-3.5 h-3.5" />
+                  </button>
                 )}
               </div>
             </div>

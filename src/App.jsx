@@ -18,11 +18,12 @@ import {
   generateRoomCode,
   saveQuizToLibrary,
   recordGameHistory,
+  kickPlayer,
 } from './services/firebase.js';
 import { useRoomSync } from './hooks/useRoomSync.js';
 import { botSimulator } from './services/mockBots.js';
 
-import { Lock } from 'lucide-react';
+import { Lock, UserX } from 'lucide-react';
 import { AIGeneratorModal } from './components/Host/AIGeneratorModal.jsx';
 import { HostAuthModal } from './components/Host/HostAuthModal.jsx';
 
@@ -398,6 +399,26 @@ export function App() {
     window.history.replaceState(null, '', '#/host');
   };
 
+  const handleHostKickPlayer = useCallback(async (playerId) => {
+    if (!hostRoomCode || !playerId) return;
+    try {
+      await kickPlayer(hostRoomCode, playerId);
+    } catch (err) {
+      console.error('Failed to kick player:', err);
+    }
+  }, [hostRoomCode]);
+
+  // Clean up student session if kicked by host
+  useEffect(() => {
+    if (studentPlayer && room?.kicked?.[studentPlayer.id]) {
+      try {
+        localStorage.removeItem('pulse_student_session');
+      } catch {
+        // ignore
+      }
+    }
+  }, [studentPlayer, room?.kicked]);
+
   // -------------------------------------------------------------
   // STUDENT ACTIONS
   // -------------------------------------------------------------
@@ -456,6 +477,15 @@ export function App() {
 
 
   const handleStudentReconnect = (session) => {
+    if (room?.kicked?.[session?.id]) {
+      try {
+        localStorage.removeItem('pulse_student_session');
+      } catch {
+        // ignore
+      }
+      alert('You have been removed from this quiz session by the host.');
+      return;
+    }
     setStudentPlayer(session);
     setStudentRoomCode(session.roomCode);
   };
@@ -584,6 +614,7 @@ export function App() {
                       room={room}
                       onStartQuiz={() => handleHostLaunchQuestion(0)}
                       onCancelRoom={handleHostExit}
+                      onKickPlayer={handleHostKickPlayer}
                     />
                   )}
 
@@ -594,6 +625,7 @@ export function App() {
                       onShowLeaderboard={handleHostShowLeaderboard}
                       onNextQuestion={handleHostNextQuestion}
                       onEndQuiz={handleHostFinishGame}
+                      onKickPlayer={handleHostKickPlayer}
                     />
                   )}
 
@@ -603,6 +635,7 @@ export function App() {
                       onNextQuestion={handleHostNextQuestion}
                       onFinishGame={handleHostFinishGame}
                       onRestart={handleHostExit}
+                      onKickPlayer={handleHostKickPlayer}
                     />
                   )}
                 </>
@@ -672,6 +705,27 @@ export function App() {
                 >
                   Cancel / Join different PIN
                 </button>
+              </div>
+            ) : room?.kicked?.[studentPlayer.id] ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center animate-fade-in-up">
+                <div className="max-w-md w-full bg-zinc-900 border border-red-500/30 rounded-2xl p-6 shadow-2xl text-center">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-4 animate-pulse">
+                    <UserX className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    Removed from Room
+                  </h3>
+                  <p className="text-sm text-zinc-400 mb-6">
+                    You have been removed from this quiz session by the host.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleStudentLeave}
+                    className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-xl transition cursor-pointer"
+                  >
+                    Return to Home
+                  </button>
+                </div>
               </div>
             ) : (
               <>

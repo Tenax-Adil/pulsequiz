@@ -3,8 +3,7 @@ import { useGeoRoomSync } from '../../hooks/useGeoRoomSync.js';
 import { GEO_STATES, formatDistance, formatPoints, getRankLabel } from '../../services/geoEngine.js';
 import { GeoPanorama } from './GeoPanorama.jsx';
 import { GeoLeafletMap } from './GeoLeafletMap.jsx';
-import { GeoTimer } from './GeoTimer.jsx';
-import { Globe, MapPin, Trophy, Users, Eye, Crosshair } from 'lucide-react';
+import { Globe, MapPin, Trophy, Users, Eye, Crosshair, AlertCircle } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 /**
@@ -27,7 +26,7 @@ export function GeoStageView({ roomCode }) {
   const activePlayer = activePlayerId ? players[activePlayerId] : null;
   const mirroredCoords = geoRoom?.mirroredCoords;
   const revealResult = geoRoom?.revealResult;
-  const timer = geoRoom?.timer;
+  const lastFailedGuess = geoRoom?.lastFailedGuess;
 
   // Sort buzzer queue by timestamp
   const sortedQueue = useMemo(() => {
@@ -243,14 +242,15 @@ export function GeoStageView({ roomCode }) {
           </div>
         )}
 
-        {/* Timer bar */}
-        {timer && status !== GEO_STATES.REVEAL && (
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[400px] z-20">
-            <GeoTimer
-              durationSec={timer.durationSec}
-              startedAt={timer.startedAt}
-              label="Tag Time"
-            />
+        {/* Status notification banner: 0 PTS / hidden location */}
+        {lastFailedGuess && status !== GEO_STATES.REVEAL && (
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 animate-fade-in-up">
+            <div className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-red-950/90 border border-red-700/80 backdrop-blur-md shadow-2xl text-red-200">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 animate-pulse" />
+              <span className="text-sm font-semibold">
+                0 PTS — Outside tolerance radius! Location remains secret. Next player up!
+              </span>
+            </div>
           </div>
         )}
 

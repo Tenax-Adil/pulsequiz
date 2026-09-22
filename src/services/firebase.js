@@ -265,8 +265,16 @@ export async function joinRoom(roomCode, player) {
   initFirebase();
 
   if (isConfigured && db) {
+    // Check if player was kicked by host
+    const kickedRef = ref(db, `rooms/${roomCode}/kicked/${player.id}`);
+    const kickedSnap = await get(kickedRef);
+    if (kickedSnap.exists() && kickedSnap.val()) {
+      throw new Error('You have been removed from this quiz session by the host.');
+    }
+
     const playerRef = ref(db, `rooms/${roomCode}/players/${player.id}`);
     await set(playerRef, {
+      id: player.id,
       nickname: player.nickname,
       avatar: player.avatar || '⚡',
       score: 0,
@@ -290,11 +298,16 @@ export async function joinRoom(roomCode, player) {
 
   if (!current) throw new Error('Room not found');
 
+  if (current.kicked?.[player.id]) {
+    throw new Error('You have been removed from this quiz session by the host.');
+  }
+
   const updated = {
     ...current,
     players: {
       ...(current.players || {}),
       [player.id]: {
+        id: player.id,
         nickname: player.nickname,
         avatar: player.avatar || '⚡',
         score: 0,
@@ -303,6 +316,61 @@ export async function joinRoom(roomCode, player) {
         joinedAt: Date.now(),
       },
     },
+  };
+
+  localRoomsStore.set(roomCode, updated);
+  try {
+    localStorage.setItem(`pulse_room_${roomCode}`, JSON.stringify(updated));
+  } catch {
+    // ignore
+  }
+
+  if (syncChannel) {
+    syncChannel.postMessage({ type: 'ROOM_UPDATE', roomCode, data: updated });
+  }
+  notifyLocalListeners(roomCode, updated);
+}
+
+/**
+ * Host kicks / removes a player from the quiz room
+ */
+export async function kickPlayer(roomCode, playerId) {
+  initFirebase();
+
+  if (isConfigured && db) {
+    try {
+      const playerRef = ref(db, `rooms/${roomCode}/players/${playerId}`);
+      const kickedRef = ref(db, `rooms/${roomCode}/kicked/${playerId}`);
+      await remove(playerRef);
+      await set(kickedRef, true);
+      return;
+    } catch (err) {
+      console.warn('Firebase kickPlayer error, falling back to local:', err);
+    }
+  }
+
+  // Local engine
+  let current = localRoomsStore.get(roomCode);
+  if (!current) {
+    try {
+      const saved = localStorage.getItem(`pulse_room_${roomCode}`);
+      if (saved) current = JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!current) return;
+
+  const updatedPlayers = { ...(current.players || {}) };
+  delete updatedPlayers[playerId];
+
+  const updatedKicked = { ...(current.kicked || {}), [playerId]: true };
+
+  const updated = {
+    ...current,
+    players: updatedPlayers,
+    kicked: updatedKicked,
   };
 
   localRoomsStore.set(roomCode, updated);
